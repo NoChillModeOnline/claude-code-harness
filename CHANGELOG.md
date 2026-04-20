@@ -6,6 +6,13 @@ Change history for claude-code-harness.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Phase 49.1.2 no-op close** — harness-mem `summary_only=true` mode (S90-002) が v0.14.0-rc.1 に landed (`0572746`) + follow-up helpers (`4a7cb36`) 同梱に伴い、claude-code-harness 側 Plans.md Phase 49.1.2 (`cc:TODO`, Depends: S90-002) を **`cc:完了 [no-op, harness-mem#70]`** でクローズ。
+  - **今まで**: Phase 49.1.2 は「`memory-session-start.sh` / `userprompt-inject-policy.sh` の jq パイプラインを短縮」という DoD で blocked 状態。S90-002 の merge 待ちでした。
+  - **今後**: 実地調査の結果、`scripts/hook-handlers/memory-session-start.sh` は 7 行の薄いラッパーで harness-mem の同名スクリプトを `exec` 丸投げするのみ、`scripts/userprompt-inject-policy.sh` は `memory-resume-context.md` を読むだけで `/v1/resume-pack` を直接呼ばない。plugin 側には短縮対象となる jq パイプラインが存在せず、**実短縮は harness-mem 側 `hook-common.sh` の helper 2 本 (`hook_extract_meta_summary` / `hook_fetch_resume_pack_summary_only`) が担い、plugin は wrapper delegate 経由で自動継承**する構造。コード変更ゼロで恩恵を受けられるため no-op close が正解と判断。
+  - cross-repo handoff: [harness-mem#70](https://github.com/Chachamaru127/harness-mem/issues/70) (AC 全項目 ✅ で解除判定 YES)
+
 ## [4.3.1] - 2026-04-19
 
 ### テーマ: Session Monitor 能動監視化 + XR-003 / Phase 49 hooks wiring 修正
