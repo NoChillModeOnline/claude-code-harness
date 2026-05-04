@@ -1,10 +1,11 @@
 ---
 name: auth
-description: "Implements authentication and payment features using Clerk, Supabase Auth, or Stripe. Use when user mentions login, authentication, payments, subscriptions, or Stripe. Do NOT load for: general UI work, database design, or non-auth features."
-description-en: "Implements authentication and payment features using Clerk, Supabase Auth, or Stripe. Use when user mentions login, authentication, payments, subscriptions, or Stripe. Do NOT load for: general UI work, database design, or non-auth features."
-description-ja: "認証と決済機能を実装。Clerk、Supabase Auth、Stripeに対応。Use when user mentions login, authentication, payments, subscriptions, or Stripe. Do NOT load for: general UI work, database design, or non-auth features."
+description: "Explicit helper for authentication and payment implementation with Clerk, Supabase Auth, or Stripe. Do NOT load for: general UI work, database design, or non-auth features."
+description-en: "Explicit helper for authentication and payment implementation with Clerk, Supabase Auth, or Stripe. Do NOT load for: general UI work, database design, or non-auth features."
+description-ja: "Clerk、Supabase Auth、Stripe を使う認証・決済実装の明示補助スキル。一般的なUI作業、データベース設計、認証以外の機能には使わない。"
 allowed-tools: ["Read", "Write", "Edit", "Bash"]
 user-invocable: false
+disable-model-invocation: true
 ---
 
 # Auth Skills

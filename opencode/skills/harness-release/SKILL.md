@@ -7,6 +7,7 @@ allowed-tools: ["Read", "Write", "Edit", "Bash"]
 argument-hint: "[patch|minor|major|--dry-run]"
 context: fork
 effort: high
+user-invocable: true
 ---
 
 # Harness Release (汎用)

@@ -75,20 +75,26 @@ for hooks_file in "${ROOT_DIR}/hooks/hooks.json" "${ROOT_DIR}/.claude-plugin/hoo
     exit 1
   }
 
-  # UserPromptSubmit での順序: memory-bridge → userprompt-inject-policy.sh → inject-policy (DoD d: merge 競合しない配列順)
+  # UserPromptSubmit での順序: memory-bridge → userprompt-inject-policy.sh
+  # 旧 Go inject-policy は shell 側と同じ additionalContext を出しうるため、
+  # UserPromptSubmit からは外して二重注入を防ぐ。
   # `.command // ""` で null-safe にする: agent/http 型 hook (.command プロパティを持たない) が混ざっても
   # 後続の `test(...)` が null に対してエラーにならないようにする。
   order_check=$(jq -r '.hooks.UserPromptSubmit[] | select(.matcher=="*") | .hooks | map(.command // "") | map(
     if test("hook memory-bridge") then "1:memory-bridge"
     elif test("userprompt-inject-policy.sh") then "2:userprompt-inject-policy"
-    elif test("hook inject-policy") then "3:inject-policy"
     else empty end
   ) | join(",")' "${hooks_file}")
-  [[ "${order_check}" == "1:memory-bridge,2:userprompt-inject-policy,3:inject-policy" ]] || {
+  [[ "${order_check}" == "1:memory-bridge,2:userprompt-inject-policy" ]] || {
     echo "UserPromptSubmit hook order mismatch in ${hooks_file}: got '${order_check}'"
-    echo "expected order: memory-bridge → userprompt-inject-policy.sh → inject-policy"
+    echo "expected order: memory-bridge → userprompt-inject-policy.sh"
     exit 1
   }
+
+  if jq -e '.hooks.UserPromptSubmit[] | .hooks[] | select(.command? | strings | contains("hook inject-policy"))' "${hooks_file}" >/dev/null; then
+    echo "UserPromptSubmit still wires hook inject-policy in ${hooks_file}; this can duplicate additionalContext"
+    exit 1
+  fi
 done
 
 # --- Issue #94 Item 4: agent/http 型 hook (command フィールドなし) を含んでも order_check が壊れないこと ---
@@ -104,8 +110,7 @@ cat > "${mixed_hooks_file}" <<'EOF'
         "hooks": [
           {"type": "command", "command": "bash /path/hook memory-bridge"},
           {"type": "agent", "agent": "some-agent"},
-          {"type": "command", "command": "bash /path/userprompt-inject-policy.sh"},
-          {"type": "command", "command": "bash /path/hook inject-policy"}
+          {"type": "command", "command": "bash /path/userprompt-inject-policy.sh"}
         ]
       }
     ]
@@ -115,10 +120,9 @@ EOF
 mixed_order=$(jq -r '.hooks.UserPromptSubmit[] | select(.matcher=="*") | .hooks | map(.command // "") | map(
   if test("hook memory-bridge") then "1:memory-bridge"
   elif test("userprompt-inject-policy.sh") then "2:userprompt-inject-policy"
-  elif test("hook inject-policy") then "3:inject-policy"
   else empty end
 ) | join(",")' "${mixed_hooks_file}")
-[[ "${mixed_order}" == "1:memory-bridge,2:userprompt-inject-policy,3:inject-policy" ]] || {
+[[ "${mixed_order}" == "1:memory-bridge,2:userprompt-inject-policy" ]] || {
   echo "mixed-type hook order_check failed (agent 型 hook 混在で jq が落ちた可能性): got '${mixed_order}'"
   exit 1
 }

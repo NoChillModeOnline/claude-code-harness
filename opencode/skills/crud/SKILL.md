@@ -1,11 +1,12 @@
 ---
 name: crud
-description: "Auto-generate CRUD quickly. Boilerplate left to AI. Use when user mentions CRUD, entity generation, or wants to create API endpoints. Do NOT load for: UI component creation, form design, database schema discussions."
-description-en: "Auto-generate CRUD quickly. Boilerplate left to AI. Use when user mentions CRUD, entity generation, or wants to create API endpoints. Do NOT load for: UI component creation, form design, database schema discussions."
-description-ja: "CRUDをサクッと自動生成。ボイラープレートはAIにお任せ。Use when user mentions CRUD, entity generation, or wants to create API endpoints. Do NOT load for: UI component creation, form design, database schema discussions."
+description: "Explicit helper for CRUD scaffolding and API endpoint generation. Do NOT load for: UI components, form design, database schema discussion, or general implementation."
+description-en: "Explicit helper for CRUD scaffolding and API endpoint generation. Do NOT load for: UI components, form design, database schema discussion, or general implementation."
+description-ja: "CRUD足場作成とAPIエンドポイント生成の明示補助スキル。UIコンポーネント、フォーム設計、データベース設計相談、通常の実装には使わない。"
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 argument-hint: "<entity-name>"
 user-invocable: false
+disable-model-invocation: true
 ---
 
 # CRUD Skill

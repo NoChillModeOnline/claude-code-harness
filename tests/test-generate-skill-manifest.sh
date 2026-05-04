@@ -19,7 +19,48 @@ jq -e '
 ' "${OUTPUT_JSON}" >/dev/null
 
 jq -e '
-  any(.skills[]; .name == "harness-plan" and (.allowed_tools | index("Read")) != null and (.allowed_tools | index("Task")) != null and .effort == "medium" and .surface == "skills" and (.related_surfaces | index("codex/.codex/skills")) != null and (.do_not_use_for | index("implementation")) != null and (.do_not_use_for | index("release tasks")) != null)
+  any(.skills[]; .name == "harness-plan" and (.allowed_tools | index("Read")) != null and (.allowed_tools | index("Task")) != null and .effort == "medium" and .surface == "skills" and (.related_surfaces | index("codex/.codex/skills")) != null and (.do_not_use_for | index("implementation")) != null and (.do_not_use_for | index("release")) != null)
+' "${OUTPUT_JSON}" >/dev/null
+
+jq -e '
+  any(.skills[]; .path == "skills/gogcli-ops/SKILL.md" and .disable_model_invocation == true) and
+  any(.skills[]; .path == "skills/session-control/SKILL.md" and .user_invocable == false and .disable_model_invocation == true) and
+  any(.skills[]; .path == "skills/ci/SKILL.md" and .user_invocable == true and .disable_model_invocation == true) and
+  any(.skills[]; .path == "skills/harness-release-internal/SKILL.md" and .user_invocable == false and .disable_model_invocation == true)
+' "${OUTPUT_JSON}" >/dev/null
+
+EXPECTED_MODEL_INVOKABLE='[
+  "breezing",
+  "harness-loop",
+  "harness-plan",
+  "harness-release",
+  "harness-setup",
+  "harness-sync",
+  "harness-work",
+  "maintenance",
+  "memory"
+]'
+
+jq -e --argjson expected "${EXPECTED_MODEL_INVOKABLE}" '
+  ([.skills[] | select(.surface == "skills" and .disable_model_invocation != true) | .name] == $expected)
+' "${OUTPUT_JSON}" >/dev/null
+
+VALID_TOOLS='[
+  "Read", "Write", "Edit", "Glob", "Grep", "Bash",
+  "Task", "WebFetch", "WebSearch", "TodoWrite",
+  "AskUserQuestion", "Skill", "EnterPlanMode", "ExitPlanMode",
+  "NotebookEdit", "LSP", "MCPSearch", "Append",
+  "Monitor", "ScheduleWakeup", "Agent"
+]'
+
+jq -e --argjson valid "${VALID_TOOLS}" '
+  [
+    .skills[] as $skill
+    | ($skill.allowed_tools[]? // empty) as $tool
+    | select(($tool | contains("*") | not) and ($tool | startswith("mcp__") | not) and (($valid | index($tool)) == null))
+    | "\($skill.path):\($tool)"
+  ] as $invalid
+  | if ($invalid | length) == 0 then true else error($invalid | join("\n")) end
 ' "${OUTPUT_JSON}" >/dev/null
 
 echo "test-generate-skill-manifest: ok"

@@ -6,6 +6,7 @@ description-ja: "Harness リリースの X (Twitter) 告知スレッドを画像
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent", "AskUserQuestion"]
 argument-hint: "[version|latest]"
 user-invocable: false
+disable-model-invocation: true
 ---
 
 # X Announce — リリース告知スレッド自動生成

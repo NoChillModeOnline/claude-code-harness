@@ -5,6 +5,7 @@ description-en: "HAR: Task planning, Plans.md management, progress sync. Trigger
 description-ja: "HAR:タスク計画・Plans.md管理・進捗同期を担当。計画作って、計画を作る、タスクを追加、Plans.md更新、完了マーク、進捗確認で起動。実装・レビュー・リリースには使わない。"
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "WebSearch", "Task"]
 argument-hint: "[create|add|update|sync|sync --no-retro|--ci]"
+user-invocable: true
 effort: medium
 ---
 

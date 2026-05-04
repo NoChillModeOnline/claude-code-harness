@@ -5,6 +5,7 @@ description-ja: "Claude Code changelog と Codex releases を調査し、Harness
 description-en: "Local-only skill for researching Claude Code and Codex upstream releases, selecting high-value adaptations, and implementing meaningful Harness upgrades. Not for distribution."
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "WebSearch"]
 user-invocable: false
+disable-model-invocation: true
 ---
 
 # Claude / Codex Upstream Update

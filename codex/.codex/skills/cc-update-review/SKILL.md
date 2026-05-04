@@ -4,6 +4,7 @@ description: "Quality guardrail for Claude/Codex update integration. Detects doc
 description-en: "Quality guardrail for Claude/Codex update integration. Detects doc-only Feature Table additions and requires implementation or explicit planning. Internal use only."
 description-ja: "Claude/Codex upstream update 統合の品質ガードレール。Feature Table 追加時に「書いただけ」を検出し、実装または Plans 化を強制する。内部専用。"
 user-invocable: false
+disable-model-invocation: true
 allowed-tools: ["Read", "Grep", "Glob", "Bash"]
 ---
 

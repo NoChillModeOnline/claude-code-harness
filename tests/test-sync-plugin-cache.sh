@@ -47,9 +47,23 @@ required_cached_files=(
   "${MARKETPLACE_DIR}/.claude-plugin/settings.json"
 )
 
+required_cached_dirs=(
+  "${CACHE_DIR}/skills"
+  "${CACHE_DIR}/output-styles"
+  "${MARKETPLACE_DIR}/skills"
+  "${MARKETPLACE_DIR}/output-styles"
+)
+
 for file in "${required_cached_files[@]}"; do
   if [[ ! -f "${file}" ]]; then
     echo "sync-plugin-cache did not populate required file: ${file}"
+    exit 1
+  fi
+done
+
+for dir in "${required_cached_dirs[@]}"; do
+  if [[ ! -d "${dir}" ]]; then
+    echo "sync-plugin-cache did not populate required directory: ${dir}"
     exit 1
   fi
 done

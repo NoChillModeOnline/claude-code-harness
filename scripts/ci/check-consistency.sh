@@ -497,6 +497,16 @@ else
   ERRORS=$((ERRORS + 1))
 fi
 
+FULL_MIRROR_LOG="$(mktemp "${TMPDIR:-/tmp}/harness-skill-mirrors.XXXXXX")"
+if bash "$PLUGIN_ROOT/scripts/sync-skill-mirrors.sh" --check >"$FULL_MIRROR_LOG" 2>&1; then
+  echo "  ✅ all shipped skill mirrors are in sync"
+else
+  echo "  ❌ full skill mirror check failed"
+  sed 's/^/      /' "$FULL_MIRROR_LOG" | tail -80
+  ERRORS=$((ERRORS + 1))
+fi
+rm -f "$FULL_MIRROR_LOG"
+
 # ================================
 # 11. CHANGELOG フォーマット検証
 # ================================

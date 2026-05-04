@@ -41,7 +41,7 @@ if [ "$sync_ok" = 0 ]; then
   echo "Warning: harness binary not found or failed; using committed .claude-plugin/* files." >&2
 fi
 
-# --- Step 2: Sync critical files to marketplace cache ---
+# --- Step 2: Sync plugin load surfaces to marketplace cache ---
 PLUGIN_NAME="claude-code-harness"
 MARKETPLACE_NAME="claude-code-harness-marketplace"
 SOURCE_VERSION="$(tr -d '[:space:]' < "${PROJECT_ROOT}/VERSION")"
@@ -71,6 +71,30 @@ sync_file() {
   fi
 }
 
+sync_dir_to_dir() {
+  local rel_path="$1"
+  local target_dir="$2"
+  local src="${PROJECT_ROOT}/${rel_path}"
+  local dst="${target_dir}/${rel_path}"
+  if [ -d "$src" ]; then
+    rm -rf "$dst"
+    mkdir -p "$(dirname "$dst")"
+    cp -R "$src" "$dst"
+  fi
+}
+
+sync_dir() {
+  local rel_path="$1"
+
+  sync_dir_to_dir "$rel_path" "$CACHE_DIR"
+
+  # Keep the installed marketplace checkout loadable too; Claude may inspect it
+  # before the versioned cache depending on install/reload state.
+  if [ -d "$MARKETPLACE_DIR" ]; then
+    sync_dir_to_dir "$rel_path" "$MARKETPLACE_DIR"
+  fi
+}
+
 # Critical files to sync to distribution cache
 critical_files=(
   "scripts/lib/harness-mem-bridge.sh"
@@ -90,4 +114,15 @@ critical_files=(
 
 for file in "${critical_files[@]}"; do
   sync_file "$file"
+done
+
+# plugin.json currently declares these directories. If they are missing from the
+# versioned install cache, Claude lists the plugin as enabled but failed to load.
+critical_dirs=(
+  "skills"
+  "output-styles"
+)
+
+for dir in "${critical_dirs[@]}"; do
+  sync_dir "$dir"
 done

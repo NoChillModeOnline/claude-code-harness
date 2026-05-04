@@ -27,7 +27,6 @@ initialPrompt: |
   推測で要件を足さない。未確認事項は "missing-input" として明示する。
 skills:
   - harness-work
-  - harness-review
 hooks:
   PreToolUse:
     - matcher: "Write|Edit"

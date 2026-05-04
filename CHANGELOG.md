@@ -6,6 +6,19 @@ Change history for claude-code-harness.
 
 ## [Unreleased]
 
+## [4.5.2] - 2026-05-04
+
+### Changed
+
+- Skill invocation governance now keeps core Harness workflow skills visible while suppressing broad helper/internal skills from model auto-invocation. This reduces accidental skill context loading without removing explicit access.
+- Skill mirror consistency now runs the full `sync-skill-mirrors.sh --check` gate during consistency checks, covering non-core skill drift as well as core `harness-*` mirrors.
+
+### Fixed
+
+- UserPromptSubmit no longer wires both `scripts/userprompt-inject-policy.sh` and Go `hook inject-policy`, preventing duplicate policy context injection on semantic prompts.
+- Worker agents no longer preload `harness-review`; implementation workers keep `harness-work`, while review context stays scoped to reviewer agents.
+- Plugin cache sync now keeps declared `skills/` and `output-styles/` directories in the active install cache, preventing enabled Harness plugins from failing to load after cache repair.
+
 ## [4.5.1] - 2026-05-03
 
 ### Changed
@@ -3676,7 +3689,8 @@ Purpose: 自己修正ループ失敗時に「止まるだけ」から「次の�
 
 For v2.9.x and earlier, see [GitHub Releases](https://github.com/Chachamaru127/claude-code-harness/releases).
 
-[Unreleased]: https://github.com/Chachamaru127/claude-code-harness/compare/v4.5.1...HEAD
+[Unreleased]: https://github.com/Chachamaru127/claude-code-harness/compare/v4.5.2...HEAD
+[4.5.2]: https://github.com/Chachamaru127/claude-code-harness/compare/v4.5.1...v4.5.2
 [4.5.1]: https://github.com/Chachamaru127/claude-code-harness/compare/v4.5.0...v4.5.1
 [4.5.0]: https://github.com/Chachamaru127/claude-code-harness/compare/v4.4.0...v4.5.0
 [4.4.0]: https://github.com/Chachamaru127/claude-code-harness/compare/v4.3.3...v4.4.0

@@ -7,6 +7,7 @@ allowed-tools: ["Read", "Grep", "Glob", "Bash", "Task", "Monitor"]
 argument-hint: "[code|plan|scope] [--dual] [--security] [--ui-rubric]"
 context: fork
 effort: high
+user-invocable: true
 disable-model-invocation: true
 ---
 

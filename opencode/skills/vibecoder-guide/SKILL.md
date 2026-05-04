@@ -1,10 +1,11 @@
 ---
 name: vibecoder-guide
-description: "Guides VibeCoder (non-technical users) through natural language development. Use when user asks what to do next, how to use the system, needs help, or is stuck. Do NOT load for: technical-user work, direct implementation requests, or reviews."
-description-en: "Guides VibeCoder (non-technical users) through natural language development. Use when user asks what to do next, how to use the system, needs help, or is stuck. Do NOT load for: technical-user work, direct implementation requests, or reviews."
-description-ja: "VibeCoder（非技術ユーザー）を自然言語開発でガイド。Use when user asks what to do next, how to use the system, needs help, or is stuck. Do NOT load for: technical-user work, direct implementation requests, or reviews."
+description: "Explicit helper for non-technical VibeCoder coaching: what to ask next, how to describe work, and how to stay safe. Do NOT load for: direct implementation, technical review, or Cursor/PM workflow."
+description-en: "Explicit helper for non-technical VibeCoder coaching: what to ask next, how to describe work, and how to stay safe. Do NOT load for: direct implementation, technical review, or Cursor/PM workflow."
+description-ja: "非技術ユーザー向けに、次の頼み方、作業の伝え方、安全な進め方を案内する明示補助スキル。直接実装、技術レビュー、Cursor/PM ワークフローには使わない。"
 allowed-tools: ["Read"]
 user-invocable: false
+disable-model-invocation: true
 ---
 
 # VibeCoder Guide Skill

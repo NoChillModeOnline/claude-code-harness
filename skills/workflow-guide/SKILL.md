@@ -1,10 +1,11 @@
 ---
 name: workflow-guide
-description: "Provides guidance on Cursor ↔ Claude Code 2-agent workflow. Use when user asks about workflow, collaboration, or process. Do NOT load for: implementation work, workflow setup, or executing handoffs."
-description-en: "Provides guidance on Cursor ↔ Claude Code 2-agent workflow. Use when user asks about workflow, collaboration, or process. Do NOT load for: implementation work, workflow setup, or executing handoffs."
-description-ja: "Cursor ↔ Claude Code 2-Agentワークフローのガイダンスを提供。Use when user asks about workflow, collaboration, or process. Do NOT load for: implementation work, workflow setup, or executing handoffs."
+description: "Explicit helper for Cursor PM ↔ Claude Code two-agent workflow guidance. Do NOT load for: solo implementation, workflow setup, handoff execution, or general process coaching."
+description-en: "Explicit helper for Cursor PM ↔ Claude Code two-agent workflow guidance. Do NOT load for: solo implementation, workflow setup, handoff execution, or general process coaching."
+description-ja: "Cursor PM と Claude Code の2エージェント運用を説明する明示補助スキル。単独実装、ワークフロー設定、ハンドオフ実行、一般的な進め方相談には使わない。"
 allowed-tools: ["Read"]
 user-invocable: false
+disable-model-invocation: true
 ---
 
 # Workflow Guide Skill
