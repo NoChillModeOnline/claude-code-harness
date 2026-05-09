@@ -748,6 +748,12 @@ else
     fail_test "render-html-redaction の契約テストに失敗 — 'bash tests/test-render-html-redaction.sh' で詳細確認"
 fi
 
+if bash "$PLUGIN_ROOT/tests/test-cross-project-flag.sh" > /dev/null 2>&1; then
+    pass_test "Phase 65.3.5 --cross-project-group flag が plan-brief / accept skill に統合され、D43 Option α (MCP N-call) で動作します (test-cross-project-flag.sh)"
+else
+    fail_test "cross-project-flag の契約テストに失敗 — 'bash tests/test-cross-project-flag.sh' で詳細確認"
+fi
+
 echo ""
 echo "=========================================="
 echo "テスト結果サマリー"

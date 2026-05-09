@@ -98,7 +98,9 @@ USER_REQUEST_HASH="$(printf '%s' "$USER_REQUEST" | sha256sum | awk '{print $1}')
 
 `PROJECT_NAME` が空 (git 外) の場合は `current` をデフォルトに使う。
 
-### Step 2: harness-mem を **project-only** で検索し、Plan Brief 側 record を取得
+### Step 2: harness-mem を **project-only** で検索し、Plan Brief 側 record を取得 (default)
+
+引数に `--cross-project-group <name>` flag が**ない**場合 (default behavior):
 
 `mcp__harness__harness_mem_search` を以下のパラメータで呼び出す:
 
@@ -113,6 +115,44 @@ limit: 10
 
 取得した record を `data.user_request_hash == <USER_REQUEST_HASH>` でフィルタし、最も新しい 1 件を選ぶ。
 これが Plan Brief 時の承認内容 (chosen_option / acceptance_criteria 等) を保持している。
+
+### Step 2 (alt): cross-project search (Phase 65.3.5 opt-in)
+
+引数に `--cross-project-group <name>` flag が**ある**場合のみ、横断 group 内の他プロジェクトでの
+類似 plan-brief-approval / acceptance-decision 履歴を取得する (D43 Option α):
+
+```bash
+MEMBERS_JSON="$(bash scripts/load-cross-project-groups.sh --group "<name>" 2>/dev/null)" || {
+  echo "ERROR: cross-project group not found: <name>" >&2
+  exit 1
+}
+```
+
+`MEMBERS_JSON` が `[]` の場合は default の単一 project search に fallback。
+
+`MEMBERS_JSON` が非空の場合、各 member project ごとに MCP search を 1 回発行:
+
+```
+for each project in MEMBERS_JSON:
+  mcp__harness__harness_mem_search(
+    project: <member>,
+    strict_project: true,
+    tags: ["personal-preference", "plan-brief-approval"],
+    limit: 10
+  )
+```
+
+結果を client 側でマージし、`data.user_request_hash == <USER_REQUEST_HASH>` でフィルタ。
+hash 一致は基本的に同一 user request 由来のため複数 project での重複は稀だが、念のため id 単位で dedupe。
+
+cross-project 由来の record を採用すると過去他案件の chosen_option / acceptance_criteria が混入する
+可能性があるため、HTML 出力時は **`--with-redaction` flag を必ず使用** すること:
+
+```bash
+bash scripts/render-html.sh --template accept ... --with-redaction
+```
+
+詳細は `.claude/rules/cross-repo-handoff.md` の「Phase 65.3 実装決定事項 (D43)」を参照。
 
 ### Step 3: 過去の問題パターンを取得 (Phase 65.2.2 委譲)
 

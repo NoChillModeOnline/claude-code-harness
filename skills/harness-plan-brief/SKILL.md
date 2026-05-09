@@ -83,7 +83,9 @@ PROJECT_NAME="$(basename "$(git rev-parse --show-toplevel)")"
 
 `PROJECT_NAME` が空 (git 外) の場合は `current` をデフォルトに使う。
 
-### Step 2: harness-mem を **project-only** で検索する
+### Step 2: harness-mem を **project-only** で検索する (default)
+
+引数に `--cross-project-group <name>` flag が**ない**場合 (default behavior):
 
 `mcp__harness__harness_mem_search` を **必ず** 以下のパラメータで呼び出す:
 
@@ -100,6 +102,47 @@ limit: 5
 > 必要なら `tags` filter で `decision` / `pattern` を絞ってもよいが、`project` は固定。
 
 過去 decision (D1-D41) / pattern (P1-P33) / Plans archive 28 件から類似案件を最大 5 件取得する。
+
+### Step 2 (alt): cross-project search (Phase 65.3.5 opt-in)
+
+引数に `--cross-project-group <name>` flag が**ある**場合のみ:
+
+D43 Option α (MCP N-call) に従い、以下の手順で cross-project 検索を行う。
+
+```bash
+# (a) group → member projects に解決 (yaml SSOT)
+MEMBERS_JSON="$(bash scripts/load-cross-project-groups.sh --group "<name>" 2>/dev/null)" || {
+  echo "ERROR: cross-project group not found: <name>" >&2
+  exit 1
+}
+# MEMBERS_JSON は ["proj1","proj2",...] 形式の JSON 配列
+```
+
+`MEMBERS_JSON` が `[]` (空配列) の場合は warning を出して default の単一 project search に fallback。
+
+`MEMBERS_JSON` が非空の場合、**各 member project に対して MCP search を 1 回ずつ発行** する:
+
+```
+for each project in MEMBERS_JSON:
+  mcp__harness__harness_mem_search(
+    project: <member>,
+    strict_project: true,
+    query: <user request>,
+    expand_links: true,
+    limit: 5
+  )
+```
+
+各 search 結果を **client 側でマージ・dedupe (id 単位)・relevance_score 降順 sort** し、最大 5 件に絞る。
+合計呼び出し数が多くなる (group が 5 project なら 5 回) ため、レイテンシは増える点に注意。
+
+> **D43 判断 1 の根拠**: MCP tool schema には `projects: [array]` も `strict_project: false` も
+> exposed されていないため、横断検索は client 側 N-call が唯一の選択肢。
+> 詳細は `.claude/rules/cross-repo-handoff.md` の「Phase 65.3 実装決定事項 (D43)」参照。
+
+cross-project 結果には Layer 2/3 (Phase 65.3.2-65.3.4) の redaction を必ず通すこと:
+- HTML レンダリング時に `bash scripts/render-html.sh ... --with-redaction` を使用
+- これにより辞書 + NER + final scan の 3 段で固有名詞が漏れない
 
 ### Step 3: context JSON を組み立てる
 
