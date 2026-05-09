@@ -706,6 +706,12 @@ else
     fail_test "Windows Breezing worktree support の契約テストに失敗 — 'bash tests/test-windows-worktree-support.sh' で詳細確認"
 fi
 
+if bash "$PLUGIN_ROOT/tests/test-render-html.sh" > /dev/null 2>&1; then
+    pass_test "render-html.sh は mustache 展開と Claude Harness palette 検証を満たします (test-render-html.sh)"
+else
+    fail_test "render-html.sh の契約テストに失敗 — 'bash tests/test-render-html.sh' で詳細確認"
+fi
+
 echo ""
 echo "=========================================="
 echo "テスト結果サマリー"
