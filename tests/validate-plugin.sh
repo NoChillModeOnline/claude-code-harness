@@ -754,6 +754,12 @@ else
     fail_test "cross-project-flag の契約テストに失敗 — 'bash tests/test-cross-project-flag.sh' で詳細確認"
 fi
 
+if bash "$PLUGIN_ROOT/tests/test-cross-project-audit.sh" > /dev/null 2>&1; then
+    pass_test "Phase 65.3.6 cross-project-audit.v1 監査ログ append + HTML 監査サマリ表示 + クエリ生記録なし (test-cross-project-audit.sh)"
+else
+    fail_test "cross-project-audit の契約テストに失敗 — 'bash tests/test-cross-project-audit.sh' で詳細確認"
+fi
+
 echo ""
 echo "=========================================="
 echo "テスト結果サマリー"

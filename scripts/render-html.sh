@@ -45,15 +45,21 @@ DATA_PATH=""
 OUT_PATH=""
 WITH_REDACTION="false"
 CLIENT_DICT_PATH=""
+AUDIT_GROUP=""
+AUDIT_MEMBERS=""
+AUDIT_QUERY_HASH=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --template)        TEMPLATE_NAME="${2:-}"; shift 2 ;;
-    --data)            DATA_PATH="${2:-}";     shift 2 ;;
-    --out)             OUT_PATH="${2:-}";      shift 2 ;;
-    --with-redaction)  WITH_REDACTION="true";  shift 1 ;;
-    --client-dict)     CLIENT_DICT_PATH="${2:-}"; shift 2 ;;
-    -h|--help)         usage ;;
+    --template)         TEMPLATE_NAME="${2:-}"; shift 2 ;;
+    --data)             DATA_PATH="${2:-}";     shift 2 ;;
+    --out)              OUT_PATH="${2:-}";      shift 2 ;;
+    --with-redaction)   WITH_REDACTION="true";  shift 1 ;;
+    --client-dict)      CLIENT_DICT_PATH="${2:-}"; shift 2 ;;
+    --audit-group)      AUDIT_GROUP="${2:-}";   shift 2 ;;
+    --audit-members)    AUDIT_MEMBERS="${2:-}"; shift 2 ;;
+    --audit-query-hash) AUDIT_QUERY_HASH="${2:-}"; shift 2 ;;
+    -h|--help)          usage ;;
     *) echo "ERROR: unknown argument: $1" >&2; usage ;;
   esac
 done
@@ -252,36 +258,92 @@ done
 LITERAL_OPEN_BRACE="{"
 TEMPLATE_CONTENT="${TEMPLATE_CONTENT//$SENTINEL_OPEN_BRACE/$LITERAL_OPEN_BRACE}"
 
-# --- Layer 2/3 Redaction (Phase 65.3.4 / D43) ---
+# --- Layer 2/3 Redaction (Phase 65.3.4 / D43) + Phase 65.3.6 audit ---
 # --with-redaction 有効時、HTML 出力直前に 3 段順次:
 #   Layer 2a: redact-by-dictionary.sh (literal 固有名詞)
 #   Layer 2b: redact-by-ner.sh (Japanese tokenizer)
 #   Layer 3 : final scan (カタカナ 5 文字以上連続を残骸として検出)
 # Layer 3 で検出時は HTML を**書かず exit 1**、stderr に detected token を出力。
+# Phase 65.3.6: --audit-group 指定時は監査ログ append + HTML 末尾に redaction
+# サマリ表示。
+DICT_COUNT=0
+NER_COUNT=0
+PASSED_FINAL_SCAN="true"
 if [[ "$WITH_REDACTION" == "true" ]]; then
   REDACTION_LOG="$TMP_DIR/redaction.log"
   : > "$REDACTION_LOG"
+  DICT_LOG="$TMP_DIR/dict.log"
+  NER_LOG="$TMP_DIR/ner.log"
 
   # Layer 2a: dict (--client-dict 指定時はそれを、なければ default SSOT)
   if [[ -n "$CLIENT_DICT_PATH" ]]; then
-    TEMPLATE_CONTENT="$(printf '%s' "$TEMPLATE_CONTENT" | bash "$SCRIPT_DIR/redact-by-dictionary.sh" --stdin --dict "$CLIENT_DICT_PATH" 2>>"$REDACTION_LOG" || true)"
+    TEMPLATE_CONTENT="$(printf '%s' "$TEMPLATE_CONTENT" | bash "$SCRIPT_DIR/redact-by-dictionary.sh" --stdin --dict "$CLIENT_DICT_PATH" 2>"$DICT_LOG" || true)"
   else
-    TEMPLATE_CONTENT="$(printf '%s' "$TEMPLATE_CONTENT" | bash "$SCRIPT_DIR/redact-by-dictionary.sh" --stdin 2>>"$REDACTION_LOG" || true)"
+    TEMPLATE_CONTENT="$(printf '%s' "$TEMPLATE_CONTENT" | bash "$SCRIPT_DIR/redact-by-dictionary.sh" --stdin 2>"$DICT_LOG" || true)"
   fi
-  # Layer 2b: NER
-  TEMPLATE_CONTENT="$(printf '%s' "$TEMPLATE_CONTENT" | bash "$SCRIPT_DIR/redact-by-ner.sh" --stdin 2>>"$REDACTION_LOG" || true)"
+  cat "$DICT_LOG" >> "$REDACTION_LOG"
 
-  # Layer 3: final scan — sentinel mark を退避してから scan
-  # detection ロジックは scripts/final-scan-redaction.py に分離 (heredoc + pipe で
-  # stdin 衝突するため、ファイル化して `python3 <script>` で呼ぶ)
+  # parse "redacted: N tokens" from dict stderr
+  if grep -q "redacted:" "$DICT_LOG" 2>/dev/null; then
+    DICT_COUNT="$(awk '/redacted:/ {print $2}' "$DICT_LOG" | head -1)"
+    DICT_COUNT="${DICT_COUNT:-0}"
+  fi
+
+  # Layer 2b: NER
+  TEMPLATE_CONTENT="$(printf '%s' "$TEMPLATE_CONTENT" | bash "$SCRIPT_DIR/redact-by-ner.sh" --stdin 2>"$NER_LOG" || true)"
+  cat "$NER_LOG" >> "$REDACTION_LOG"
+
+  # parse "redacted: N entities" from NER stderr
+  if grep -q "redacted:" "$NER_LOG" 2>/dev/null; then
+    NER_COUNT="$(awk '/redacted:/ {print $2}' "$NER_LOG" | head -1)"
+    NER_COUNT="${NER_COUNT:-0}"
+  fi
+
+  # Layer 3: final scan
   set +e
   printf '%s' "$TEMPLATE_CONTENT" | python3 "$SCRIPT_DIR/final-scan-redaction.py"
   FINAL_SCAN_EXIT=$?
   set -e
 
   if [[ $FINAL_SCAN_EXIT -ne 0 ]]; then
+    PASSED_FINAL_SCAN="false"
+    # 監査ログには「failed」を残してから abort する (Plans.md DoD e の
+    # 「final scan 失敗」ケース対応)
+    if [[ -n "$AUDIT_GROUP" && -n "$AUDIT_QUERY_HASH" ]]; then
+      bash "$SCRIPT_DIR/cross-project-audit-log.sh" \
+        --group "$AUDIT_GROUP" \
+        --members "${AUDIT_MEMBERS:-}" \
+        --query-hash "$AUDIT_QUERY_HASH" \
+        --dict-count "$DICT_COUNT" \
+        --ner-count "$NER_COUNT" \
+        --passed-final-scan "false" 2>>"$REDACTION_LOG" || true
+    fi
     echo "ERROR: Layer 3 final scan detected residue (HTML generation aborted)" >&2
     exit 1
+  fi
+
+  # --- HTML 末尾に redaction サマリを表示 (Plans.md §65.3.6 DoD d) ---
+  # </body> の直前に footer を挿入。</body> がない場合は末尾に append。
+  AUDIT_FOOTER="<div class=\"audit-summary\" style=\"margin-top:2em;padding:0.6em 0.8em;border-top:1px solid #ccc;font-size:0.85em;color:#666;\">redacted: dict ${DICT_COUNT} 件 + NER ${NER_COUNT} 件</div>"
+  # bash parameter substitution: pattern の '/' は最初の 1 つのみ separator、
+  # 以降は literal。replacement 内の '<\/body>' は literal な「<\/body>」になるので
+  # 必ず '</body>' (backslash なし) を書く。
+  if printf '%s' "$TEMPLATE_CONTENT" | grep -q "</body>"; then
+    BODY_CLOSE_TAG="</body>"
+    TEMPLATE_CONTENT="${TEMPLATE_CONTENT/${BODY_CLOSE_TAG}/${AUDIT_FOOTER}${BODY_CLOSE_TAG}}"
+  else
+    TEMPLATE_CONTENT="${TEMPLATE_CONTENT}${AUDIT_FOOTER}"
+  fi
+
+  # --- audit log append (--audit-group 指定時のみ) ---
+  if [[ -n "$AUDIT_GROUP" && -n "$AUDIT_QUERY_HASH" ]]; then
+    bash "$SCRIPT_DIR/cross-project-audit-log.sh" \
+      --group "$AUDIT_GROUP" \
+      --members "${AUDIT_MEMBERS:-}" \
+      --query-hash "$AUDIT_QUERY_HASH" \
+      --dict-count "$DICT_COUNT" \
+      --ner-count "$NER_COUNT" \
+      --passed-final-scan "$PASSED_FINAL_SCAN" 2>>"$REDACTION_LOG" || true
   fi
 fi
 
