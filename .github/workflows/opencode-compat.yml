@@ -66,6 +66,19 @@ jobs:
           fi
           echo "✅ opencode/ is in sync"
 
+      - name: Bootstrap local-only skill mirror for downstream i18n test
+        # check-consistency.sh (below) invokes tests/test-i18n-japanese-ux-regression.sh,
+        # which expects .agents/skills/{harness-work,harness-review,harness-plan,
+        # x-article,x-announce}/SKILL.md. That directory is a documented
+        # local-only mirror (gitignored) so we recreate it from the SSOT here.
+        run: |
+          for skill in harness-work harness-review harness-plan x-article x-announce; do
+            if [ -d "skills/$skill" ]; then
+              mkdir -p ".agents/skills/$skill"
+            fi
+          done
+          bash scripts/sync-skill-mirrors.sh
+
       - name: Check codex mirror sync
         run: |
           bash scripts/ci/check-consistency.sh
