@@ -19,7 +19,7 @@ jobs:
   actionlint:
     name: actionlint
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 5
 
     steps:
       - name: Checkout
@@ -29,10 +29,18 @@ jobs:
           fetch-depth: 1
           filter: blob:none
 
+      - name: Setup Go (harness composite)
+        uses: ./.github/actions/setup-go-harness
+
+      - name: Install actionlint via go install (version-pinned, immutable)
+        # Using `go install MODULE@VERSION` resolves to a content-addressed
+        # module proxy entry, providing the same supply-chain guarantees as
+        # SHA-pinned actions without depending on a mutable Docker tag.
+        run: go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+
       - name: Run actionlint (workflow YAML lint)
-        uses: docker://rhysd/actionlint:1.7.12
-        with:
-          args: -color
+        run: |
+          "$(go env GOPATH)/bin/actionlint" -color
 
   validate:
     runs-on: ubuntu-latest

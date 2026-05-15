@@ -65,7 +65,7 @@ jobs:
       - name: Setup Go (harness composite)
         uses: ./.github/actions/setup-go-harness
 
-      - name: Build harness binary
+      - name: Build harness binary and add bin/ to PATH
         working-directory: go
         shell: bash
         run: |
@@ -75,38 +75,34 @@ jobs:
             EXT=".exe"
           fi
           go build -o "../bin/harness${EXT}" ./cmd/harness/
-          echo "BIN=./bin/harness${EXT}" >> "$GITHUB_ENV"
+          # Expose bin/ so `harness` is invocable bare and `harness doctor`'s
+          # "bin/harness in PATH" check passes — this exercises the same
+          # invocation pattern end users get after `harness sync`.
+          echo "${GITHUB_WORKSPACE}/bin" >> "${GITHUB_PATH}"
 
       - name: Smoke — version
         shell: bash
         run: |
-          "$BIN" version
-          "$BIN" 2>&1 | head -5 || true
+          harness version
+          harness 2>&1 | head -5 || true
 
       - name: Smoke — validate skills
         shell: bash
-        run: |
-          "$BIN" validate skills .
+        run: harness validate skills .
 
       - name: Smoke — validate agents
         shell: bash
-        run: |
-          "$BIN" validate agents .
+        run: harness validate agents .
 
       - name: Smoke — validate all
         shell: bash
-        run: |
-          "$BIN" validate all .
+        run: harness validate all .
 
       - name: Smoke — doctor
         shell: bash
-        run: |
-          # doctor exits non-zero only on real health regressions; we tolerate
-          # warnings about local-only state that does not exist in CI.
-          "$BIN" doctor . || {
-            echo "::warning::doctor reported non-zero on ${{ matrix.label }} — inspect logs above"
-            exit 0
-          }
+        # No fallback: doctor's non-zero exit is the only signal that the
+        # delivered plugin would be broken on this OS for end users.
+        run: harness doctor .
 
       - name: Plugin manifest sanity (jq)
         if: runner.os != 'Windows'
