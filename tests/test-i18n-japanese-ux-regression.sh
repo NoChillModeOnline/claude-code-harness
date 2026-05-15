@@ -40,6 +40,19 @@ copy_dir skills-codex
 copy_dir codex/.codex/skills
 copy_dir .agents/skills
 
+# `.agents/skills/` is a local-only mirror (gitignored). On CI / fresh
+# checkouts it does not exist on the host, so derive it inside the temp dir
+# from skills/ before locale processing. This keeps the test self-contained
+# without changing the project's "local-only mirror" intent.
+if [ ! -d "$tmpdir/repo/.agents/skills" ]; then
+  mkdir -p "$tmpdir/repo/.agents/skills"
+  for s in harness-work harness-review harness-plan; do
+    if [ -d "$tmpdir/repo/skills/$s" ]; then
+      cp -R "$tmpdir/repo/skills/$s" "$tmpdir/repo/.agents/skills/$s"
+    fi
+  done
+fi
+
 locale_log="$tmpdir/i18n-japanese-ux-locale.log"
 if ! (
   cd "$tmpdir/repo"
