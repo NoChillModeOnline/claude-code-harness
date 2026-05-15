@@ -1,5 +1,8 @@
-#!/usr/bin/env bash
-# Lightweight harness-review closeout helper.
+#!/bin/bash
+# harness-review-closeout.sh
+# Lightweight harness-review closeout helper for --quick / --codex-closeout paths.
+#
+# Usage: bash scripts/harness-review-closeout.sh [options]
 
 set -euo pipefail
 
@@ -93,8 +96,6 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-cd "$ROOT_DIR"
-
 if [ "$TARGET_MODE" = "commit" ]; then
   if [ -z "$COMMIT_REF" ]; then
     echo "--commit requires a ref" >&2
@@ -102,13 +103,13 @@ if [ "$TARGET_MODE" = "commit" ]; then
   fi
   BASE_REF="${COMMIT_REF}^"
 elif [ "$TARGET_MODE" = "auto" ]; then
-  if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
+  if [ -n "$(git -C "$ROOT_DIR" status --porcelain 2>/dev/null)" ]; then
     TARGET_MODE="working_tree"
     BASE_REF="HEAD"
-  elif git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' >/dev/null 2>&1; then
+  elif git -C "$ROOT_DIR" rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' >/dev/null 2>&1; then
     TARGET_MODE="branch_range"
-    BASE_REF="$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}')"
-  elif git rev-parse --verify origin/main >/dev/null 2>&1; then
+    BASE_REF="$(git -C "$ROOT_DIR" rev-parse --abbrev-ref --symbolic-full-name '@{upstream}')"
+  elif git -C "$ROOT_DIR" rev-parse --verify origin/main >/dev/null 2>&1; then
     TARGET_MODE="branch_range"
     BASE_REF="origin/main"
   else
@@ -123,19 +124,19 @@ if [ -z "$BASE_REF" ]; then
   exit 2
 fi
 
-REVIEW_COMMAND="bash scripts/codex-companion.sh review --base ${BASE_REF} --json"
+REVIEW_COMMAND="bash $ROOT_DIR/scripts/codex-companion.sh review --base ${BASE_REF} --json"
 CODEX_AVAILABLE=0
 FALLBACK=""
 REVIEW_STATUS="not_run"
 
-if bash scripts/codex-companion.sh setup --json >/dev/null 2>&1; then
+if bash "$ROOT_DIR/scripts/codex-companion.sh" setup --json >/dev/null 2>&1; then
   CODEX_AVAILABLE=1
 else
   FALLBACK="codex unavailable; use full manual pass"
 fi
 
 if [ "$DRY_RUN" -eq 0 ] && [ "$CODEX_AVAILABLE" -eq 1 ]; then
-  if bash scripts/codex-companion.sh review --base "$BASE_REF" --json; then
+  if bash "$ROOT_DIR/scripts/codex-companion.sh" review --base "$BASE_REF" --json; then
     REVIEW_STATUS="passed"
   else
     REVIEW_STATUS="failed"

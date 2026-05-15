@@ -41,8 +41,6 @@ commit / push / release は既定では行わない。
 - commit が必要な場合は、ユーザー明示依頼、`harness-work`、または `harness-release` の Work Commit Gate に委譲する
 - `--commit-on-approve` のような明示 opt-in が設計されるまで、この skill 単体の default side effect は禁止
 
-## Mode Decision
-
 ## Quick Reference
 
 | Command | Mode | Purpose |
@@ -55,6 +53,10 @@ commit / push / release は既定では行わない。
 | `/harness-review --security` | `security` | security 専用 review |
 | `/harness-review plan` | `plan` | `Plans.md` の計画 review |
 | `/harness-review scope` | `scope` | scope creep / 漏れ review |
+
+## Mode Decision
+
+引数から実行 mode を決定し、必要な `references/` を選択ロードする。
 
 | 入力 | mode | 読む reference |
 |---|---|---|
