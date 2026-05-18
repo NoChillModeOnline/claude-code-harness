@@ -160,11 +160,7 @@ var Rules = []GuardRule{
 			if !ok {
 				return nil
 			}
-			match := classifyBashProtectedWrite(command)
-			if match.Level == protectedPathNone {
-				return nil
-			}
-			return protectedPathHookResult(match, match.Path, "保護パスへのシェル書き込み")
+			return bashProtectedWriteHookResult(ctx, command)
 		},
 	},
 

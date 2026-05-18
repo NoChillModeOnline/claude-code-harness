@@ -33,6 +33,11 @@ ask = [
   "Bash(git push --force:*)",
 ]
 
+# Optional R03 break-glass. TOML only; YAML does not support this list.
+# [[safety.guardrail.protectedPathAskList]]
+# path = ".env"
+# reason = "customer deploy env update"
+
 [safety.sandbox]
 failIfUnavailable = false
 

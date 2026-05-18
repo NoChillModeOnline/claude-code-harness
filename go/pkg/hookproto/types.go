@@ -135,9 +135,18 @@ type RuleContext struct {
 	CodexMode                 bool
 	BreezingRole              string // "" means not in breezing mode
 	ProtectedBranchPushPolicy string // ask, deny, or allow
+	ProtectedPathAskList      []ProtectedPathAskEntry
 	TddEnforceLevel           string // off, central, or max
 	TddHookEnabled            bool
 	TddBypass                 bool
 	TddBypassReason           string
 	TddBypassReasonRequired   bool
+}
+
+// ProtectedPathAskEntry is a narrow R03 break-glass policy entry loaded from
+// harness.toml. Source is the config file path used for audit messages.
+type ProtectedPathAskEntry struct {
+	Path   string
+	Reason string
+	Source string
 }

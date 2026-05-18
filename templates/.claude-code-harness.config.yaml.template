@@ -57,6 +57,11 @@ safety:
   # deny: block direct pushes
   # allow: allow direct pushes without Harness confirmation
   protected_branch_push: ask
+  # R03 protected path break-glass ask-list is supported only in harness.toml:
+  # [[safety.guardrail.protectedPathAskList]]
+  # path = ".env"
+  # reason = "customer deploy env update"
+  # This YAML template intentionally has no protectedPathAskList parser.
 
 # Context budget (estimated tooling overhead).
 context_budget:

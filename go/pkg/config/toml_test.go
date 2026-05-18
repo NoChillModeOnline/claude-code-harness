@@ -49,6 +49,10 @@ deniedDomains = ["169.254.169.254", "metadata.google.internal"]
 denyRead = [".env", "secrets/**", "**/*.pem"]
 allowRead = [".env.example", "docs/**"]
 
+[[safety.guardrail.protectedPathAskList]]
+path = ".env"
+reason = "customer deploy env update"
+
 [tdd]
 adopt_todo_list_first = true
 adopt_triangulation = "guide-only"
@@ -137,6 +141,15 @@ func TestParse_Full(t *testing.T) {
 	if len(cfg.Safety.Sandbox.Filesystem.AllowRead) != 2 {
 		t.Errorf("sandbox.filesystem.allowRead len = %d, want 2", len(cfg.Safety.Sandbox.Filesystem.AllowRead))
 	}
+	if len(cfg.Safety.Guardrail.ProtectedPathAskList) != 1 {
+		t.Fatalf("guardrail.protectedPathAskList len = %d, want 1", len(cfg.Safety.Guardrail.ProtectedPathAskList))
+	}
+	if cfg.Safety.Guardrail.ProtectedPathAskList[0].Path != ".env" {
+		t.Errorf("guardrail.protectedPathAskList[0].path = %q, want .env", cfg.Safety.Guardrail.ProtectedPathAskList[0].Path)
+	}
+	if cfg.Safety.Guardrail.ProtectedPathAskList[0].Reason != "customer deploy env update" {
+		t.Errorf("guardrail.protectedPathAskList[0].reason = %q", cfg.Safety.Guardrail.ProtectedPathAskList[0].Reason)
+	}
 
 	// [tdd]
 	if !cfg.TDD.AdoptTodoListFirst {
@@ -162,6 +175,31 @@ func TestParse_Full(t *testing.T) {
 	}
 	if !cfg.TDD.Enforce.BypassAuditRequired {
 		t.Error("tdd.enforce.bypass_audit_required = false, want true")
+	}
+}
+
+func TestParse_GuardrailProtectedPathAskList(t *testing.T) {
+	data := []byte(`
+[[safety.guardrail.protectedPathAskList]]
+path = ".env"
+reason = "customer deploy env update"
+
+[[safety.guardrail.protectedPathAskList]]
+path = ".env.production"
+reason = "production deploy handoff"
+`)
+	cfg, err := config.ParseBytes(data)
+	if err != nil {
+		t.Fatalf("unexpected parse error: %v", err)
+	}
+	if len(cfg.Safety.Guardrail.ProtectedPathAskList) != 2 {
+		t.Fatalf("guardrail.protectedPathAskList len = %d, want 2", len(cfg.Safety.Guardrail.ProtectedPathAskList))
+	}
+	if got := cfg.Safety.Guardrail.ProtectedPathAskList[0].Path; got != ".env" {
+		t.Fatalf("first path = %q, want .env", got)
+	}
+	if got := cfg.Safety.Guardrail.ProtectedPathAskList[1].Reason; got != "production deploy handoff" {
+		t.Fatalf("second reason = %q", got)
 	}
 }
 

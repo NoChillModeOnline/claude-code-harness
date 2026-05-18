@@ -290,7 +290,7 @@ Harness v4 protects your codebase with a **Go-native guardrail engine** (`go/int
 |------|-----------|--------|
 | R01 | `sudo` commands | **Deny** |
 | R02 | `.git/`, `.env`, secrets | **Deny** write |
-| R03 | Shell writes to protected files | **Deny** |
+| R03 | Shell writes to protected files | **Deny** by default; `.env` / `.env.*` can **Ask** via TOML break-glass |
 | R04 | Writes outside project | **Ask** |
 | R05 | `rm -rf` | **Ask** |
 | R06 | `git push --force` | **Deny** |

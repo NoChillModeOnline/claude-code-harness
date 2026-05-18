@@ -6,6 +6,26 @@ Change history for claude-code-harness.
 
 ## [Unreleased]
 
+### Phase 71: Project-scoped R03 protected path break-glass
+
+#### Before / After
+
+| 観点 | Before | After |
+|------|--------|-------|
+| `.env` deploy edits | R03 shell writes to `.env` / `.env.*` were always denied, even for local developer-only deploy workflows | Project-local `harness.toml` can opt exact `.env` / `.env.*` shell writes down to `ask` with a required reason |
+| Guardrail blast radius | A broad R02/R03 opt-out would also relax `.git/`, secrets, keys, hooks, and shell profile protection | R02 remains deny, hard-deny paths remain deny, and R03 break-glass is ask-only with audit context |
+| Mirror drift detection | Local `.agents/skills` drift could pass the normal skill validation path | `tests/validate-skills.sh` now checks local-only `.agents` mirrors when present |
+
+### Added
+
+- Added a project-scoped R03 protected path break-glass ask-list via `[[safety.guardrail.protectedPathAskList]]` in `harness.toml`. It supports exact `.env` / `.env.*` shell-write paths with a non-empty reason and emits rule/path/source/reason audit context without echoing secret values.
+- Added local-only `.agents/skills` mirror validation to catch Claude-agent mirror drift when that mirror exists on a developer machine.
+
+### Fixed
+
+- Kept R02 Write/Edit/MultiEdit, `.git/`, `secrets/`, key files, SSH trust files, shell profile files, `.claude/hooks`, `.husky`, project-external paths, and mixed hard-deny shell writes denied even when an R03 ask-list entry is configured.
+- Documented and tested that R03 target extraction remains redirection / `tee` scoped; in-place writes such as `sed -i .env` are outside this v1 break-glass scope.
+
 ### Phase 70: Hokage Core extraction positioning (docs-only)
 
 #### Before / After

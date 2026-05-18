@@ -259,6 +259,43 @@ for skill_dir in "${SKILL_DIRS[@]}"; do
 done
 
 echo ""
+echo "5. local-only .agents mirror 検証"
+echo "----------------------------------------"
+
+AGENTS_SKILLS_DIR="$PLUGIN_ROOT/.agents/skills"
+
+if [ ! -d "$AGENTS_SKILLS_DIR" ]; then
+  pass_test ".agents/skills は存在しません（fresh checkout では正常）"
+else
+  agents_mirror_checked=0
+
+  while IFS= read -r agent_skill_file; do
+    agent_skill_dir="$(dirname "$agent_skill_file")"
+    skill_name="$(basename "$agent_skill_dir")"
+    source_skill_dir="$SKILLS_DIR/$skill_name"
+
+    if [ ! -d "$source_skill_dir" ]; then
+      debug_log "[$skill_name] .agents local-only entry has no skills/ source; skipped"
+      continue
+    fi
+
+    agents_mirror_checked=$((agents_mirror_checked + 1))
+    if diff -qr --exclude='.DS_Store' --exclude='.claude' "$source_skill_dir" "$agent_skill_dir" >/dev/null 2>&1; then
+      pass_test "[.agents/$skill_name] mirror is in sync"
+    else
+      fail_test "[.agents/$skill_name] mirror が skills/$skill_name と不一致です（bash scripts/sync-skill-mirrors.sh を実行してください）"
+      if [ "$VERBOSE" -eq 1 ]; then
+        diff -qr --exclude='.DS_Store' --exclude='.claude' "$source_skill_dir" "$agent_skill_dir" | sed 's/^/  [DIFF] /' || true
+      fi
+    fi
+  done < <(find "$AGENTS_SKILLS_DIR" -mindepth 2 -maxdepth 2 -name "SKILL.md" -type f 2>/dev/null | sort)
+
+  if [ "$agents_mirror_checked" -eq 0 ]; then
+    warn_test ".agents/skills に検証対象の mirror が見つかりません"
+  fi
+fi
+
+echo ""
 echo "=========================================="
 echo "スキル検証結果サマリー"
 echo "=========================================="

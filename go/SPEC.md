@@ -335,7 +335,7 @@ RECOVERING → ABORTED     (リカバリ失敗、人間介入必要)
 |----|--------|------|----------|---------|
 | R01 | Bash | `sudo` 検出 | deny | なし |
 | R02 | Write/Edit/MultiEdit | 保護パス (.env, .git/, *.pem, *.key, id_rsa 等) | deny | なし |
-| R03 | Bash | `> .env`, `tee .git/` 等 | deny | なし |
+| R03 | Bash | redirection / `tee` による `> .env`, `tee .git/` 等 | deny（TOML ask-list の `.env` / `.env.*` exact match + reason のみ ask） | `[[safety.guardrail.protectedPathAskList]]` |
 | R04 | Write/Edit/MultiEdit | プロジェクトルート外への絶対パス | ask | workMode |
 | R05 | Bash | `rm -rf` / `rm --recursive` | ask | workMode |
 | R06 | Bash | `git push --force` / `-f` | deny | なし |
@@ -346,6 +346,8 @@ RECOVERING → ABORTED     (リカバリ失敗、人間介入必要)
 | R11 | Bash | protected branch への `git reset --hard` | deny | なし |
 | R12 | Bash | main/master への直接 push | ask（設定で deny / allow 可） | `protected_branch_push` |
 | R13 | Write/Edit/MultiEdit | package.json, Dockerfile, workflow 等 | approve + warn | なし |
+
+R03 の target extraction は redirection / `tee` ベース。`sed -i` 等の in-place 書き込み検出は v1 範囲外。
 
 テスト ID: `TestR01_*` 〜 `TestR13_*` (go/internal/guard/rules_test.go)
 

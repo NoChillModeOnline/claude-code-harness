@@ -256,6 +256,174 @@ func TestR03_RedirectToClaudeStateNotOverDenied(t *testing.T) {
 	}
 }
 
+func TestR03_EnvAskListReturnsAsk(t *testing.T) {
+	ctx := makeCtx("Bash", map[string]interface{}{"command": "printf 'SECRET=foo\n' > .env"})
+	ctx.ProtectedPathAskList = []hookproto.ProtectedPathAskEntry{{
+		Path:   ".env",
+		Reason: "customer deploy env update",
+		Source: "/project/harness.toml",
+	}}
+	result := EvaluateRules(ctx)
+	if result.Decision != hookproto.DecisionAsk {
+		t.Fatalf("expected ask, got %s", result.Decision)
+	}
+	for _, want := range []string{"R03", ".env", "harness.toml", "customer deploy env update"} {
+		if !strings.Contains(result.Reason, want) {
+			t.Fatalf("expected ask reason to contain %q, got %q", want, result.Reason)
+		}
+	}
+	if strings.Contains(result.Reason, "SECRET=foo") {
+		t.Fatalf("ask reason echoed command content: %q", result.Reason)
+	}
+}
+
+func TestR02_EnvAskListDoesNotBypassWriteDeny(t *testing.T) {
+	ctx := makeCtx("Write", map[string]interface{}{"file_path": ".env"})
+	ctx.ProtectedPathAskList = []hookproto.ProtectedPathAskEntry{{
+		Path:   ".env",
+		Reason: "customer deploy env update",
+		Source: "/project/harness.toml",
+	}}
+	result := EvaluateRules(ctx)
+	if result.Decision != hookproto.DecisionDeny {
+		t.Fatalf("expected R02 deny, got %s", result.Decision)
+	}
+}
+
+func TestR03_EnvAskListRequiresNonEmptyReason(t *testing.T) {
+	ctx := makeCtx("Bash", map[string]interface{}{"command": "printf 'SECRET=foo\n' > .env"})
+	ctx.ProtectedPathAskList = []hookproto.ProtectedPathAskEntry{{
+		Path:   ".env",
+		Reason: " ",
+		Source: "/project/harness.toml",
+	}}
+	result := EvaluateRules(ctx)
+	if result.Decision != hookproto.DecisionDeny {
+		t.Fatalf("expected deny when ask-list reason is empty, got %s", result.Decision)
+	}
+}
+
+func TestR03_EnvAskListRequiresExactPath(t *testing.T) {
+	ctx := makeCtx("Bash", map[string]interface{}{"command": "printf 'SECRET=foo\n' > .env.production"})
+	ctx.ProtectedPathAskList = []hookproto.ProtectedPathAskEntry{{
+		Path:   ".env",
+		Reason: "customer deploy env update",
+		Source: "/project/harness.toml",
+	}}
+	result := EvaluateRules(ctx)
+	if result.Decision != hookproto.DecisionDeny {
+		t.Fatalf("expected deny for non-exact ask-list path, got %s", result.Decision)
+	}
+}
+
+func TestR03_EnvAskListCanMatchNarrowEnvVariant(t *testing.T) {
+	ctx := makeCtx("Bash", map[string]interface{}{"command": "printf 'SECRET=foo\n' > .env.production"})
+	ctx.ProtectedPathAskList = []hookproto.ProtectedPathAskEntry{{
+		Path:   ".env.production",
+		Reason: "customer deploy env update",
+		Source: "/project/harness.toml",
+	}}
+	result := EvaluateRules(ctx)
+	if result.Decision != hookproto.DecisionAsk {
+		t.Fatalf("expected ask for exact env variant path, got %s", result.Decision)
+	}
+}
+
+func TestR03_EnvAskListCanMatchAbsolutePathInsideProject(t *testing.T) {
+	ctx := makeCtx("Bash", map[string]interface{}{"command": "printf 'SECRET=foo\n' > /project/.env"})
+	ctx.ProtectedPathAskList = []hookproto.ProtectedPathAskEntry{{
+		Path:   ".env",
+		Reason: "customer deploy env update",
+		Source: "/project/harness.toml",
+	}}
+	result := EvaluateRules(ctx)
+	if result.Decision != hookproto.DecisionAsk {
+		t.Fatalf("expected ask for absolute path inside project, got %s", result.Decision)
+	}
+}
+
+func TestR03_EnvAskListDoesNotBypassOutsideProjectPath(t *testing.T) {
+	tests := []struct {
+		name    string
+		command string
+		path    string
+	}{
+		{name: "relative traversal", command: "echo data > ../other/.env", path: "../other/.env"},
+		{name: "absolute outside project", command: "echo data > /tmp/.env", path: "/tmp/.env"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := makeCtx("Bash", map[string]interface{}{"command": tt.command})
+			ctx.ProtectedPathAskList = []hookproto.ProtectedPathAskEntry{{
+				Path:   tt.path,
+				Reason: "customer deploy env update",
+				Source: "/project/harness.toml",
+			}}
+			result := EvaluateRules(ctx)
+			if result.Decision != hookproto.DecisionDeny {
+				t.Fatalf("expected deny for project-external path %s, got %s", tt.path, result.Decision)
+			}
+		})
+	}
+}
+
+func TestR03_EnvAskListDoesNotBypassHardDenyPaths(t *testing.T) {
+	tests := []struct {
+		name    string
+		command string
+		path    string
+	}{
+		{name: "git", command: "echo data > .git/config", path: ".git/config"},
+		{name: "secrets", command: "echo data > secrets/.env", path: "secrets/.env"},
+		{name: "pem", command: "echo data > certs/server.pem", path: "certs/server.pem"},
+		{name: "key", command: "echo data > .env.key", path: ".env.key"},
+		{name: "ssh trust", command: "echo data > .ssh/authorized_keys", path: ".ssh/authorized_keys"},
+		{name: "shell rc", command: "echo data > .zshrc", path: ".zshrc"},
+		{name: "claude hooks", command: "echo data > .claude/hooks/pre-tool.sh", path: ".claude/hooks/pre-tool.sh"},
+		{name: "husky", command: "echo data > .husky/pre-commit", path: ".husky/pre-commit"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := makeCtx("Bash", map[string]interface{}{"command": tt.command})
+			ctx.ProtectedPathAskList = []hookproto.ProtectedPathAskEntry{{
+				Path:   tt.path,
+				Reason: "customer deploy env update",
+				Source: "/project/harness.toml",
+			}}
+			result := EvaluateRules(ctx)
+			if result.Decision != hookproto.DecisionDeny {
+				t.Fatalf("expected deny for %s, got %s", tt.path, result.Decision)
+			}
+		})
+	}
+}
+
+func TestR03_EnvAskListDoesNotHideMixedHardDenyTarget(t *testing.T) {
+	ctx := makeCtx("Bash", map[string]interface{}{"command": "echo safe > .env && echo hard > .git/config"})
+	ctx.ProtectedPathAskList = []hookproto.ProtectedPathAskEntry{{
+		Path:   ".env",
+		Reason: "customer deploy env update",
+		Source: "/project/harness.toml",
+	}}
+	result := EvaluateRules(ctx)
+	if result.Decision != hookproto.DecisionDeny {
+		t.Fatalf("expected deny when command also writes hard-deny path, got %s", result.Decision)
+	}
+}
+
+func TestR03_SedInPlaceEnvWriteOutOfScope(t *testing.T) {
+	ctx := makeCtx("Bash", map[string]interface{}{"command": "sed -i '' 's/foo/bar/' .env"})
+	ctx.ProtectedPathAskList = []hookproto.ProtectedPathAskEntry{{
+		Path:   ".env",
+		Reason: "customer deploy env update",
+		Source: "/project/harness.toml",
+	}}
+	result := EvaluateRules(ctx)
+	if result.Decision != hookproto.DecisionApprove {
+		t.Fatalf("expected approve because R03 currently extracts redirection/tee targets only, got %s", result.Decision)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // R04: write outside project root
 // ---------------------------------------------------------------------------

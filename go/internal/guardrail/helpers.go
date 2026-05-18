@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/Chachamaru127/claude-code-harness/go/pkg/hookproto"
 )
 
 // ---------------------------------------------------------------------------
@@ -177,6 +179,41 @@ func classifyBashProtectedWrite(command string) protectedPathMatch {
 		best = strongerProtectedPathMatch(best, classifyProtectedPathPattern(target))
 	}
 	return best
+}
+
+func bashProtectedWriteHookResult(ctx hookproto.RuleContext, command string) *hookproto.HookResult {
+	var askResult *hookproto.HookResult
+	var warnResult *hookproto.HookResult
+
+	for _, target := range extractBashWriteTargets(command) {
+		match := classifyProtectedPathPattern(target)
+		switch match.Level {
+		case protectedPathDeny:
+			if result := r03ProtectedPathAskResult(ctx, match.Path); result != nil {
+				if askResult == nil {
+					askResult = result
+				}
+				continue
+			}
+			return protectedPathHookResult(match, match.Path, "保護パスへのシェル書き込み")
+		case protectedPathAsk:
+			if askResult == nil {
+				askResult = protectedPathHookResult(match, match.Path, "保護パスへのシェル書き込み")
+			}
+		case protectedPathWarn:
+			if warnResult == nil {
+				warnResult = protectedPathHookResult(match, match.Path, "保護パスへのシェル書き込み")
+			}
+		}
+	}
+
+	if askResult != nil {
+		return askResult
+	}
+	if warnResult != nil {
+		return warnResult
+	}
+	return nil
 }
 
 // ---------------------------------------------------------------------------
