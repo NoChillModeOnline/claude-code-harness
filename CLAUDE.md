@@ -117,6 +117,8 @@ Details: [docs/CLAUDE-commands.md](docs/CLAUDE-commands.md)
 
 変更が必要な場合はユーザーに手動操作を依頼すること。
 
+外部 API への sandbox allowlist 設定 (Firecrawl / web スクレイプ等): [docs/sandbox-allowlist-recipe.md](docs/sandbox-allowlist-recipe.md) — `~/.claude/settings.json` への patch 手順を SSOT 化。`templates/sandbox-settings.json.template` と数値・項目を同期。
+
 ## Key Commands (for development)
 
 | Command | Purpose |

@@ -33,7 +33,17 @@ Change history for claude-code-harness.
 
 **今後**: 「AI 側は patch 提示まで、ユーザー側が手動編集」という責任境界を docs の `## なぜ AI が自動で編集しないのか` セクションで codify。将来 sandbox 周りの問題に他セッションが遭遇した時、「`Edit/Write(.claude/settings*)` deny + Bash 迂回も classifier deny + ユーザー手動編集が正規ルート」と一発で把握できます。
 
-#### 3. 推奨 allowedDomains を 29 個に拡張 (Firecrawl + 日本テックブログ群)
+#### 3. `templates/sandbox-settings.json.template` を 29 ドメイン構成に同期 + 導線追加
+
+**今まで**: `templates/sandbox-settings.json.template` の `allowedDomains` は 8 個 (github / npmjs / anthropic / pypi / rubygems / crates のみ) で、docs の 29 個推奨と乖離。新規プロジェクトで template を流用しても `codeload.github.com` / `objects.githubusercontent.com` / `files.pythonhosted.org` / `proxy.golang.org` / `sum.golang.org` / `static.crates.io` 不在で git clone / pip / go mod / cargo が落ちる可能性がありました。また `CLAUDE.md` / 既存 docs から新 doc への inbound link がゼロで、「`@docs/sandbox-allowlist-recipe.md` で一発参照」の約束が機能していませんでした。
+
+**今後**:
+
+- `templates/sandbox-settings.json.template` を recipe と完全同期 (29 ドメイン allowlist + 9 ドメイン denylist + 6 excludedCommands)。`_notes.sync_with` フィールドで「recipe と数値・項目を完全一致させること」を明示し drift 再発を防止
+- `CLAUDE.md` Permission Boundaries セクションに 1 行ポインタ追加: `外部 API への sandbox allowlist 設定 (Firecrawl / web スクレイプ等): docs/sandbox-allowlist-recipe.md`
+- docs の patch JSON 例を「先頭 comma append 形式」から「top-level 同階層に 1 ブロック追加」+ 完成形 JSON 構造図に変更。コピペ手順 (`cp backup` → エディタ編集 → `jq -e` 検証 → CC 再起動) を追加して手動編集ミスを防止
+
+#### 4. 推奨 allowedDomains を 29 個に拡張 (Firecrawl + 日本テックブログ群)
 
 **今まで**: `templates/sandbox-settings.json.template` には開発コア 8 ドメイン (github / npm / anthropic / pypi / rubygems / crates) のみ列挙されており、Firecrawl の API host (`api.firecrawl.dev`) や代表的なテックブログ (`techblog.zozo.com` / `note.com` / `zenn.dev` 等) は含まれていませんでした。
 
