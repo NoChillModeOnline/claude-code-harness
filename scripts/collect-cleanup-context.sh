@@ -28,13 +28,13 @@ if [ -f "Plans.md" ]; then
   PLANS_LINES=$(wc -l < "Plans.md" | tr -d ' ')
 
   # タスク数をカウント
-  COMPLETED_TASKS=$(grep -c "\[x\].*cc:完了\|pm:確認済\|cursor:確認済" Plans.md 2>/dev/null || echo "0")
-  WIP_TASKS=$(grep -c "cc:WIP\|pm:依頼中\|cursor:依頼中" Plans.md 2>/dev/null || echo "0")
-  TODO_TASKS=$(grep -c "cc:TODO" Plans.md 2>/dev/null || echo "0")
-  PM_PENDING_TASKS=$(( $(grep -c "pm:依頼中" Plans.md 2>/dev/null || echo "0") + $(grep -c "cursor:依頼中" Plans.md 2>/dev/null || echo "0") ))
-  PM_CONFIRMED_TASKS=$(( $(grep -c "pm:確認済" Plans.md 2>/dev/null || echo "0") + $(grep -c "cursor:確認済" Plans.md 2>/dev/null || echo "0") ))
-  CC_WIP_TASKS=$(grep -c "cc:WIP" Plans.md 2>/dev/null || echo "0")
-  CC_DONE_TASKS=$(grep -c "cc:完了" Plans.md 2>/dev/null || echo "0")
+  COMPLETED_TASKS=$(grep -c "\[x\].*cc:done\|\[x\].*cc:完了\|pm:approved\|pm:確認済\|cursor:確認済" Plans.md 2>/dev/null || echo "0")
+  WIP_TASKS=$(grep -c "cc:wip\|cc:WIP\|pm:requested\|pm:依頼中\|cursor:依頼中" Plans.md 2>/dev/null || echo "0")
+  TODO_TASKS=$(( $(grep -c "cc:todo" Plans.md 2>/dev/null || echo "0") + $(grep -c "cc:TODO" Plans.md 2>/dev/null || echo "0") ))
+  PM_PENDING_TASKS=$(( $(grep -c "pm:requested" Plans.md 2>/dev/null || echo "0") + $(grep -c "pm:依頼中" Plans.md 2>/dev/null || echo "0") + $(grep -c "cursor:依頼中" Plans.md 2>/dev/null || echo "0") ))
+  PM_CONFIRMED_TASKS=$(( $(grep -c "pm:approved" Plans.md 2>/dev/null || echo "0") + $(grep -c "pm:確認済" Plans.md 2>/dev/null || echo "0") + $(grep -c "cursor:確認済" Plans.md 2>/dev/null || echo "0") ))
+  CC_WIP_TASKS=$(( $(grep -c "cc:wip" Plans.md 2>/dev/null || echo "0") + $(grep -c "cc:WIP" Plans.md 2>/dev/null || echo "0") ))
+  CC_DONE_TASKS=$(( $(grep -c "cc:done" Plans.md 2>/dev/null || echo "0") + $(grep -c "cc:完了" Plans.md 2>/dev/null || echo "0") ))
 
   # 最も古い完了日を取得（YYYY-MM-DD 形式を探す）
   OLDEST_COMPLETED_DATE=$(grep -oE "[0-9]{4}-[0-9]{2}-[0-9]{2}" Plans.md 2>/dev/null | sort | head -1 || echo "")

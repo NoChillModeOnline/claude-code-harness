@@ -2,9 +2,13 @@
 
 Status: Phase 55 / task 55.0.1
 
-Issue: [#105 Can the default language be changed to English?](https://github.com/Chachamaru127/claude-code-harness/issues/105)
+Issues:
+
+- [#105 Can the default language be changed to English?](https://github.com/Chachamaru127/claude-code-harness/issues/105)
+- [#147 Status Marker Localization Issue](https://github.com/Chachamaru127/claude-code-harness/issues/147)
 
 Confirmed: 2026-04-24
+Updated: 2026-05-24 for Issue #147
 
 ## Purpose
 
@@ -20,7 +24,8 @@ this document as the source of truth.
 
 1. User-facing default locale is `en`.
 2. Japanese remains supported through explicit opt-in and Japanese input UX.
-3. Internal status markers are protocol values, not display strings.
+3. Status markers are protocol values, but they are also visible user-facing
+   text in generated Plans.md rows, summaries, and notifications.
 4. Skill frontmatter must keep both `description-en` and `description-ja`.
 5. Migration must be non-destructive and idempotent.
 
@@ -70,7 +75,7 @@ current process.
 
 ## Status Markers
 
-These markers remain internal protocol values:
+These markers remain read-compatible protocol values:
 
 | Marker | Meaning |
 | --- | --- |
@@ -81,26 +86,26 @@ These markers remain internal protocol values:
 | `pm:確認済` | PM confirmed completion. |
 | `blocked` | Work is blocked. |
 
-Do not translate these markers as part of English-default UX work. They are
-parsed by Plans.md tooling and loop scripts. Treat them as state protocol, not
-as display strings: surrounding labels, help text, and templates may be
-localized, but the marker stored in `Plans.md` remains the protocol value.
+New and updated writer paths must not keep generating a mixed-language marker
+family such as `cc:TODO`, `cc:WIP`, and `cc:完了` in Plans.md rows or
+notification text. That shape is valid legacy input, but it is not the
+canonical output for future writes.
 
-The canonical writer output remains:
+The canonical writer output for new or updated rows is:
 
-| State | Canonical writer output | Read-compatible aliases |
+| State | New/update writer output | Read-compatible aliases |
 | --- | --- | --- |
-| Requested | `pm:依頼中` | `cursor:依頼中`, `pm:requested` |
-| Queued | `cc:TODO` | none |
-| In progress | `cc:WIP` | none |
-| Done | `cc:完了` | `cc:done` |
-| Approved | `pm:確認済` | `cursor:確認済`, `pm:approved` |
+| Requested | `pm:requested` | `pm:依頼中`, `cursor:依頼中` |
+| Queued | `cc:todo` | `cc:TODO` |
+| In progress | `cc:wip` | `cc:WIP` |
+| Done | `cc:done` | `cc:完了` |
+| Approved | `pm:approved` | `pm:確認済`, `cursor:確認済` |
 | Blocked | `blocked` | `cc:blocked` |
 
-Aliases are read-compatibility only. They allow English-facing or legacy
-fixtures to be parsed without data loss, but Harness writers must keep emitting
-the canonical markers above unless a future migration task explicitly changes
-the protocol.
+Japanese opt-in localizes surrounding prose, templates, and runtime messages,
+but it does not change status marker writer output. Existing Plans.md files
+must not be bulk-rewritten implicitly; migration requires an explicit command
+or user approval.
 
 The state contract for marker parsing is intentionally narrow:
 
@@ -109,8 +114,9 @@ The state contract for marker parsing is intentionally narrow:
 | Input | Existing `Plans.md` rows and heading-style tasks may contain canonical markers, cursor aliases, or the English aliases listed above. |
 | Storage | `Plans.md` remains the source of truth; parser checks must not rewrite it during validation or dry-run paths. |
 | Update trigger | Writers update task state only when executing an approved workflow such as work completion or PM confirmation. |
-| Readers | `codex-loop`, sprint-contract generation, Plans issue bridge, and format checks must accept canonical markers and aliases. |
-| Rollback | Because alias support is read-only, rollback is removing parser alias recognition; no data migration or backup restore is required. |
+| Readers | `codex-loop`, sprint-contract generation, Plans issue bridge, and format checks must accept legacy markers and English aliases. |
+| Writers | All new/update writer paths emit the English marker family; locale affects prose only. |
+| Rollback | Rollback must preserve parser compatibility for legacy Plans.md files; do not remove legacy marker recognition. |
 
 ## Skill Metadata Contract
 

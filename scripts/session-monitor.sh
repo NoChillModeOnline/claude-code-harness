@@ -82,11 +82,11 @@ fi
 if [ -f "$PLANS_FILE" ]; then
   PLANS_EXISTS="true"
   PLANS_MODIFIED=$(stat -f "%m" "$PLANS_FILE" 2>/dev/null || stat -c "%Y" "$PLANS_FILE" 2>/dev/null || echo "0")
-  WIP_COUNT=$(count_tasks "cc:WIP")
-  TODO_COUNT=$(count_tasks "cc:TODO")
-  # pm:* を正規。cursor:* は互換で同義扱い
-  PENDING_COUNT=$(( $(count_tasks "pm:依頼中") + $(count_tasks "cursor:依頼中") ))
-  COMPLETED_COUNT=$(count_tasks "cc:完了")
+  WIP_COUNT=$(( $(count_tasks "cc:wip") + $(count_tasks "cc:WIP") ))
+  TODO_COUNT=$(( $(count_tasks "cc:todo") + $(count_tasks "cc:TODO") ))
+  # English marker family を正規。日本語 / cursor は互換で同義扱い
+  PENDING_COUNT=$(( $(count_tasks "pm:requested") + $(count_tasks "pm:依頼中") + $(count_tasks "cursor:依頼中") ))
+  COMPLETED_COUNT=$(( $(count_tasks "cc:done") + $(count_tasks "cc:完了") ))
 else
   PLANS_EXISTS="false"
   PLANS_MODIFIED="0"

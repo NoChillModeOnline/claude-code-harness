@@ -15,7 +15,7 @@ MESSAGE=""
 # Plans.md の分析
 if [ -f "Plans.md" ]; then
   PLANS_LINES=$(wc -l < "Plans.md" | tr -d ' ')
-  COMPLETED_TASKS=$(grep -c "\[x\].*cc:完了\|pm:確認済\|cursor:確認済" Plans.md 2>/dev/null || echo "0")
+  COMPLETED_TASKS=$(grep -c "\[x\].*cc:done\|\[x\].*cc:完了\|pm:approved\|pm:確認済\|cursor:確認済" Plans.md 2>/dev/null || echo "0")
 
   # 判定条件1: 完了タスク10件以上
   if [ "$COMPLETED_TASKS" -ge 10 ]; then

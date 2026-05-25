@@ -6,9 +6,9 @@
 #
 # マッピング:
 #   TodoWrite状態     → Plans.mdマーカー
-#   pending          → cc:TODO
-#   in_progress      → cc:WIP
-#   completed        → cc:完了
+#   pending          → cc:todo
+#   in_progress      → cc:wip
+#   completed        → cc:done
 
 set +e  # エラーで停止しない
 

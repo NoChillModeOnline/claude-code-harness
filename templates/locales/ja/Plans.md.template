@@ -13,7 +13,7 @@ _harness_version: "4.3.3"
 
 ## 🔴 進行中のタスク
 
-<!-- cc:WIP のタスクをここに記載 -->
+<!-- cc:wip のタスクをここに記載 -->
 
 （現在なし）
 
@@ -21,9 +21,9 @@ _harness_version: "4.3.3"
 
 ## 🟡 未着手のタスク
 
-<!-- cc:TODO, pm:依頼中（互換: cursor:依頼中） のタスクをここに記載 -->
+<!-- cc:todo, pm:requested（旧 pm:依頼中 / cursor:依頼中 も読取可） のタスクをここに記載 -->
 
-- [ ] プロジェクト初期セットアップ `cc:TODO`
+- [ ] プロジェクト初期セットアップ `cc:todo`
   - 基本的なディレクトリ構造の作成
   - 依存関係のインストール
 
@@ -31,9 +31,9 @@ _harness_version: "4.3.3"
 
 ## 🟢 完了タスク
 
-<!-- cc:完了, pm:確認済（互換: cursor:確認済） のタスクをここに記載 -->
+<!-- cc:done, pm:approved（旧 cc:完了 / pm:確認済 / cursor:確認済 も読取可） のタスクをここに記載 -->
 
-- [x] 2-Agent / 2-Claude ワークフロー導入 `pm:確認済` ({{DATE}})
+- [x] 2-Agent / 2-Claude ワークフロー導入 `pm:approved` ({{DATE}})
 
 ---
 
@@ -47,13 +47,17 @@ _harness_version: "4.3.3"
 
 | マーカー | 意味 |
 |---------|------|
-| `pm:依頼中` | PM から依頼されたタスク（ソロPM Claude / Cursor PM 共通） |
-| `cc:TODO` | Claude Code 未着手 |
-| `cc:WIP` | Claude Code 作業中 |
-| `cc:完了` | Claude Code 完了（確認待ち） |
-| `pm:確認済` | PM 確認完了 |
-| `cursor:依頼中` | （互換）`pm:依頼中` と同義 |
-| `cursor:確認済` | （互換）`pm:確認済` と同義 |
+| `pm:requested` | PM から依頼されたタスク |
+| `cc:todo` | Claude Code 未着手 |
+| `cc:wip` | Claude Code 作業中 |
+| `cc:done` | Claude Code 完了（確認待ち） |
+| `pm:approved` | PM 確認完了 |
+| `pm:依頼中` | （互換）`pm:requested` と同義 |
+| `cc:TODO` | （互換）`cc:todo` と同義 |
+| `cc:WIP` | （互換）`cc:wip` と同義 |
+| `pm:確認済` | （互換）`pm:approved` と同義 |
+| `cursor:依頼中` | （互換）`pm:requested` と同義 |
+| `cursor:確認済` | （互換）`pm:approved` と同義 |
 | `blocked` | ブロック中（理由を併記） |
 
 ---
@@ -65,10 +69,10 @@ _harness_version: "4.3.3"
 ### タスク ID / 依存関係 / 並列可
 
 ```markdown
-- [ ] T001: 認証機能 `cc:TODO`
-- [ ] T002: ユーザーAPI `cc:TODO` depends:T001
-- [ ] T003: 商品API `cc:TODO` [P]
-- [ ] T004: 注文API `cc:TODO` depends:T001,T003
+- [ ] T001: 認証機能 `cc:todo`
+- [ ] T002: ユーザーAPI `cc:todo` depends:T001
+- [ ] T003: 商品API `cc:todo` [P]
+- [ ] T004: 注文API `cc:todo` depends:T001,T003
 ```
 
 | 記法 | 意味 | 例 |

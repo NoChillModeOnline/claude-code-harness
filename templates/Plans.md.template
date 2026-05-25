@@ -13,7 +13,7 @@ _harness_version: "4.3.3"
 
 ## In Progress
 
-<!-- Add tasks with cc:WIP here. -->
+<!-- Add tasks with cc:wip here. -->
 
 (none)
 
@@ -21,9 +21,9 @@ _harness_version: "4.3.3"
 
 ## Not Started
 
-<!-- Add tasks with cc:TODO or pm:依頼中 here. -->
+<!-- Add tasks with cc:todo or pm:requested here. -->
 
-- [ ] Initial project setup `cc:TODO`
+- [ ] Initial project setup `cc:todo`
   - Create the basic directory structure
   - Install dependencies
 
@@ -31,9 +31,9 @@ _harness_version: "4.3.3"
 
 ## Completed
 
-<!-- Add tasks with cc:完了 or pm:確認済 here. -->
+<!-- Add tasks with cc:done or pm:approved here. -->
 
-- [x] Introduce the 2-Agent / 2-Claude workflow `pm:確認済` ({{DATE}})
+- [x] Introduce the 2-Agent / 2-Claude workflow `pm:approved` ({{DATE}})
 
 ---
 
@@ -50,13 +50,17 @@ unless the project has tested parser aliases.
 
 | Marker | Meaning |
 |--------|---------|
-| `pm:依頼中` | PM requested work |
-| `cc:TODO` | Not started by Claude Code |
-| `cc:WIP` | Claude Code is working |
-| `cc:完了` | Claude Code completed the task and is awaiting confirmation |
-| `pm:確認済` | PM confirmed completion |
-| `cursor:依頼中` | Compatibility alias for `pm:依頼中` |
-| `cursor:確認済` | Compatibility alias for `pm:確認済` |
+| `pm:requested` | PM requested work |
+| `cc:todo` | Not started by Claude Code |
+| `cc:wip` | Claude Code is working |
+| `cc:done` | Claude Code completed the task and is awaiting confirmation |
+| `pm:approved` | PM confirmed completion |
+| `pm:依頼中` | Compatibility alias for `pm:requested` |
+| `cc:TODO` | Compatibility alias for `cc:todo` |
+| `cc:WIP` | Compatibility alias for `cc:wip` |
+| `pm:確認済` | Compatibility alias for `pm:approved` |
+| `cursor:依頼中` | Compatibility alias for `pm:requested` |
+| `cursor:確認済` | Compatibility alias for `pm:approved` |
 | `blocked` | Blocked; include the reason next to the task |
 
 ---
@@ -68,10 +72,10 @@ For larger plans, you may add task IDs, dependencies, and parallel markers.
 ### Task ID / Dependency / Parallel Marker
 
 ```markdown
-- [ ] T001: Authentication `cc:TODO`
-- [ ] T002: User API `cc:TODO` depends:T001
-- [ ] T003: Product API `cc:TODO` [P]
-- [ ] T004: Order API `cc:TODO` depends:T001,T003
+- [ ] T001: Authentication `cc:todo`
+- [ ] T002: User API `cc:todo` depends:T001
+- [ ] T003: Product API `cc:todo` [P]
+- [ ] T004: Order API `cc:todo` depends:T001,T003
 ```
 
 | Syntax | Meaning | Example |

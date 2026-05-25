@@ -33,29 +33,29 @@ fi
 
 # 変更がある場合のみ Plans.md をチェック
 if [ "$HAS_CHANGES" = "true" ] && [ -f "Plans.md" ]; then
-  PM_PENDING=$(( $(grep -c "pm:依頼中" Plans.md 2>/dev/null || echo "0") + $(grep -c "cursor:依頼中" Plans.md 2>/dev/null || echo "0") ))
-  CC_WIP=$(grep -c "cc:WIP" Plans.md 2>/dev/null || echo "0")
-  CC_DONE=$(grep -c "cc:完了" Plans.md 2>/dev/null || echo "0")
+  PM_PENDING=$(( $(grep -c "pm:requested" Plans.md 2>/dev/null || echo "0") + $(grep -c "pm:依頼中" Plans.md 2>/dev/null || echo "0") + $(grep -c "cursor:依頼中" Plans.md 2>/dev/null || echo "0") ))
+  CC_WIP=$(( $(grep -c "cc:wip" Plans.md 2>/dev/null || echo "0") + $(grep -c "cc:WIP" Plans.md 2>/dev/null || echo "0") ))
+  CC_DONE=$(( $(grep -c "cc:done" Plans.md 2>/dev/null || echo "0") + $(grep -c "cc:完了" Plans.md 2>/dev/null || echo "0") ))
 
   # PM からの依頼がある場合
   if [ "$PM_PENDING" -gt 0 ]; then
     NEED_REMINDER="true"
     REASON="pm_pending_tasks > 0"
-    MESSAGE="Plans.md: pm:依頼中 が${PM_PENDING}件あります。作業開始時は cc:WIP に、完了時は cc:完了 に更新してください"
+    MESSAGE="Plans.md: ${PM_PENDING} pm:requested task(s) remain. Start work with cc:wip and mark completion with cc:done."
   fi
 
   # WIP タスクがある場合
   if [ "$CC_WIP" -gt 0 ]; then
     NEED_REMINDER="true"
     REASON="cc_wip_tasks > 0"
-    MESSAGE="Plans.md: cc:WIP が${CC_WIP}件あります。完了した場合は cc:完了 に更新してください"
+    MESSAGE="Plans.md: ${CC_WIP} cc:wip task(s) remain. Mark completed work with cc:done."
   fi
 
   # 完了タスクがある場合（PM確認待ち）
   if [ "$CC_DONE" -gt 0 ]; then
     NEED_REMINDER="true"
     REASON="cc_done_tasks > 0"
-    MESSAGE="Plans.md: cc:完了 が${CC_DONE}件あります。PMが確認後 pm:確認済 に更新してください"
+    MESSAGE="Plans.md: ${CC_DONE} cc:done task(s) await PM review. After PM confirms, use pm:approved."
   fi
 fi
 

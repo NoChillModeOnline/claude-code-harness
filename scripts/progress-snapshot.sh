@@ -3,7 +3,7 @@
 # Phase 65.4.1 - Plans.md → progress-snapshot.v1 JSON
 #
 # Purpose:
-#   Plans.md の task table から cc:TODO / cc:WIP / cc:完了 の件数と
+#   Plans.md の task table から cc:todo / cc:wip / cc:done の件数と
 #   一覧を抽出し、harness-progress skill 用の snapshot JSON を生成する。
 #
 # Usage:
@@ -13,7 +13,7 @@
 #
 # Plans.md format 想定:
 #   | <number> | <title> | <DoD> | <Depends> | <Status> |
-#   Status は cc:TODO / cc:WIP / cc:完了 [hash] / pm:依頼中 / pm:確認済
+#   Status は cc:todo / cc:wip / cc:done [hash]（旧 cc:TODO / cc:WIP / cc:完了 も読取可）
 #   pm:* は本 snapshot の対象外
 #
 # Optional: --state-file
@@ -119,8 +119,8 @@ COST_SO_FAR = to_float(os.environ["COST_SO_FAR_PY"])
 COST_ESTIMATE = to_float(os.environ["COST_ESTIMATE_PY"])
 
 # Plans.md の task 行を parse:
-#   "| 65.4.1 | <title> | <DoD> | <Depends> | cc:TODO |"
-#   "| 65.4.1 | <title> | <DoD> | <Depends> | cc:完了 [a1b2c3d] |"
+#   "| 65.4.1 | <title> | <DoD> | <Depends> | cc:todo |"
+#   "| 65.4.1 | <title> | <DoD> | <Depends> | cc:done [a1b2c3d] |"
 # title は最初の `。` までを 1 行サマリとして使う
 
 ROW_RE = re.compile(
@@ -142,11 +142,11 @@ with open(PLANS_PATH, "r", encoding="utf-8") as f:
         if len(short_title) > 80:
             short_title = short_title[:77] + "..."
 
-        if status == "cc:TODO":
+        if status in ("cc:todo", "cc:TODO"):
             todo.append({"number": number, "title": short_title})
-        elif status == "cc:WIP":
+        elif status in ("cc:wip", "cc:WIP"):
             wip.append({"number": number, "title": short_title})
-        elif status.startswith("cc:完了"):
+        elif status.startswith("cc:done") or status.startswith("cc:完了"):
             commit_match = re.search(r"\[([a-f0-9]+)\]", status)
             commit = commit_match.group(1)[:7] if commit_match else ""
             done.append({"number": number, "title": short_title, "commit": commit})

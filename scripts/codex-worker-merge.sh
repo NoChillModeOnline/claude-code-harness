@@ -29,12 +29,12 @@ update_plans() {
         return 1
     fi
 
-    # cc:WIP → cc:完了, [ ] → [x]
+    # cc:WIP / cc:wip → cc:done, [ ] → [x]
     if grep -q "$task_pattern" "$plans_file"; then
-        sed -i.bak "s/\(.*$task_pattern.*\)cc:WIP/\1cc:完了/" "$plans_file"
+        sed -i.bak -E "s/(.*$task_pattern.*)cc:(WIP|wip)/\1cc:done/" "$plans_file"
         sed -i.bak "s/\(.*$task_pattern.*\)\[ \]/\1[x]/" "$plans_file"
         rm -f "$plans_file.bak"
-        log_info "Plans.md 更新: $task_pattern → cc:完了"
+        log_info "Plans.md updated: $task_pattern -> cc:done"
         return 0
     fi
 

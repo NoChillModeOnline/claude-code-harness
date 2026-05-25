@@ -6,6 +6,16 @@ Change history for claude-code-harness.
 
 ## [Unreleased]
 
+### Changed
+
+- Standardized new and updated Plans status markers on the English family (`pm:requested`, `cc:todo`, `cc:wip`, `cc:done`, `pm:approved`) while keeping existing Japanese markers readable.
+- Updated Plans templates, watcher notifications, session summaries, progress snapshots, and worker prompts so completed work now writes `cc:done` instead of generating new `cc:完了` markers.
+
+### Fixed
+
+- Verified guardrail/runtime reason strings stay English by default with Japanese output preserved through `CLAUDE_CODE_HARNESS_LANG=ja`.
+- Rechecked protected-path `.env` break-glass behavior and codex-loop orphan active-job recovery against current tests, with public issue closeout evidence recorded.
+
 ## [4.12.2] - 2026-05-24
 
 ### Fixed

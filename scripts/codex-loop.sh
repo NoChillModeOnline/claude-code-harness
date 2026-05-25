@@ -428,6 +428,8 @@ def status_from_text(value):
     markers = (
         "cc:TODO",
         "cc:WIP",
+        "cc:todo",
+        "cc:wip",
         "cc:完了",
         "pm:確認済",
         "pm:依頼中",
@@ -646,6 +648,8 @@ def status_from_text(value):
     markers = (
         "cc:TODO",
         "cc:WIP",
+        "cc:todo",
+        "cc:wip",
         "cc:完了",
         "pm:確認済",
         "pm:依頼中",
@@ -717,7 +721,7 @@ elif "-" in selection and selection not in ordered_ids:
 else:
     selected_ids = {selection}
 
-active_markers = ("cc:TODO", "cc:WIP", "pm:依頼中", "cursor:依頼中", "pm:requested")
+active_markers = ("cc:TODO", "cc:WIP", "cc:todo", "cc:wip", "pm:依頼中", "cursor:依頼中", "pm:requested")
 for task_id, status in rows:
     if task_id in selected_ids and has_any_status(status, active_markers):
         print(task_id)
@@ -747,6 +751,8 @@ def status_from_text(value):
     markers = (
         "cc:TODO",
         "cc:WIP",
+        "cc:todo",
+        "cc:wip",
         "cc:完了",
         "pm:確認済",
         "pm:依頼中",
@@ -818,7 +824,7 @@ def is_complete(status):
 
 
 def is_active(status):
-    return any(marker in status for marker in ("cc:TODO", "cc:WIP", "pm:依頼中", "cursor:依頼中", "pm:requested"))
+    return any(marker in status for marker in ("cc:TODO", "cc:WIP", "cc:todo", "cc:wip", "pm:依頼中", "cursor:依頼中", "pm:requested"))
 
 
 def depends_ready(depends, status_by_id):
@@ -883,6 +889,8 @@ def status_from_text(value):
     markers = (
         "cc:TODO",
         "cc:WIP",
+        "cc:todo",
+        "cc:wip",
         "cc:完了",
         "pm:確認済",
         "pm:依頼中",
@@ -954,6 +962,8 @@ def status_from_text(value):
     markers = (
         "cc:TODO",
         "cc:WIP",
+        "cc:todo",
+        "cc:wip",
         "cc:完了",
         "pm:確認済",
         "pm:依頼中",
@@ -1993,7 +2003,7 @@ Do exactly one task cycle.
 1. Read Plans.md and the sprint contract.
 2. Work only on task ${task_id}. Do not start another long-running loop or background runner.
 3. Implement the task, run the validation you judge necessary, and keep the repo coherent.
-4. If the task is in a good state, update Plans.md for ${task_id} to \`cc:完了 [<commit>]\` and create a commit.
+4. If the task is in a good state, update Plans.md for ${task_id} to \`cc:done [<commit>]\` and create a commit.
 5. If the task is blocked or not ready to approve, do not fake completion. Leave a clear explanation in the final message.
 6. In all cases, end with a short summary that starts with either:
    - RESULT: APPROVED
@@ -2023,7 +2033,7 @@ Do exactly one ready-task batch.
 1. Read Plans.md and work only on the target tasks listed above.
 2. Run the equivalent of \`harness-work --breezing --max-workers ${max_workers} ${task_ids}\` inside this repository.
 3. Use parallel workers only for independent tasks. Keep review and cherry-pick/integration serial.
-4. If every target task reaches a good state, update Plans.md for each target task to \`cc:完了 [<commit>]\` and create a commit.
+4. If every target task reaches a good state, update Plans.md for each target task to \`cc:done [<commit>]\` and create a commit.
 5. If any target task is blocked or not ready to approve, do not fake completion. Leave a clear explanation in the final message.
 6. In all cases, end with a short summary that starts with either:
    - RESULT: APPROVED
@@ -3135,6 +3145,14 @@ EOF
       HARNESS_PLAN_FILE="${plans_file}" bash "${SELF_SCRIPT}" run-cycle --run-id "${run_id}" --task-id "${task_id}" --cycle "${next_cycle}" --executor task || cycle_status=$?
     fi
     if [ "${cycle_status}" -ne 0 ]; then
+      local recorded_exit_reason
+      recorded_exit_reason="$(json_get_file "${RUN_JSON}" "exit_reason" "")"
+      if [ "${recorded_exit_reason}" = "runner_exit" ]; then
+        RUNNER_FINALIZED=1
+        release_lock
+        log_line "run finished: status=failed reason=runner_exit"
+        exit 1
+      fi
       case "${cycle_status}" in
         21) finalize_run "failed" "task_blocked" "Task(s) ${task_id} did not reach approval" ;;
         22) finalize_run "failed" "pivot_required" "Plateau detected for task(s) ${task_id}" ;;

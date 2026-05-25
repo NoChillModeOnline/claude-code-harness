@@ -424,8 +424,8 @@ rm -f "${STATE_DIR}/.ultrawork-review-warned" 2>/dev/null || true
 # ===== Plans.md チェック =====
 PLANS_INFO=""
 if [ -f "Plans.md" ]; then
-  wip_count="$(count_matches "cc:WIP\\|pm:依頼中\\|cursor:依頼中" "Plans.md")"
-  todo_count="$(count_matches "cc:TODO" "Plans.md")"
+  wip_count="$(count_matches "cc:wip\\|cc:WIP\\|pm:requested\\|pm:依頼中\\|cursor:依頼中" "Plans.md")"
+  todo_count="$(count_matches "cc:todo\\|cc:TODO" "Plans.md")"
   PLANS_INFO="📄 Plans.md: 進行中 ${wip_count} / 未着手 ${todo_count}"
 else
   PLANS_INFO="📄 Plans.md: 未検出"

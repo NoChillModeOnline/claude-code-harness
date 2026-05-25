@@ -337,6 +337,34 @@ When multiple generated-image directions are plausible, README copy may ship
 without those images, but final image generation and integration require an
 explicit user approval gate for the chosen direction.
 
+## I18n And Status Marker Contract
+
+Harness ships with English as the default user-facing locale, while Japanese
+remains available through explicit opt-in.
+
+Status markers are both protocol values and visible user-facing text. New or
+updated Plans.md rows, templates, summaries, and generated notification files
+must not mix Japanese and English within the same status marker family. Writer
+paths must emit the English marker family, especially `cc:done` for completed
+work, alongside `cc:todo`, `cc:wip`, `pm:requested`, and `pm:approved`.
+
+Backward compatibility is mandatory:
+
+- existing `cc:TODO`, `cc:WIP`, `cc:完了`, `pm:依頼中`, and `pm:確認済` rows remain
+  valid input,
+- Japanese opt-in may preserve surrounding Japanese prose, but new and updated
+  status marker writes still use the English marker family,
+- readers, sync, loop, sprint-contract, and Plans validation must accept both
+  legacy canonical markers and English aliases,
+- bulk migration of existing Plans.md files is never implicit; it requires an
+  explicit migration command or user approval.
+
+User-facing runtime reasons, guardrail messages, status summaries, and generated
+state notifications should follow the same locale resolver as other Harness
+messages for prose. Status marker writes are the exception: new/update writer
+paths use the English marker family while legacy Japanese markers remain
+read-compatible.
+
 ## Memory Contract
 
 When a planning or design decision is made, Harness should record why it was
@@ -358,7 +386,7 @@ V2 does not:
 - replace `Plans.md` with `spec.md`,
 - split Fast/Gate/Release into three new primary skills,
 - make every task a heavy Gate lane task,
-- replace `cc:TODO`, `cc:WIP`, or `cc:完了` markers,
+- break existing `cc:TODO`, `cc:WIP`, or `cc:完了` marker compatibility,
 - let review auto-commit, push, PR, merge, or release,
 - treat local green checks as PR-ready or release-ready by themselves,
 - weaken release verification to save time.

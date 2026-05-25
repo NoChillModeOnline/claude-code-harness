@@ -453,8 +453,8 @@ fi
 
 PLANS_INFO=""
 if [ -f "$PLANS_PATH" ]; then
-  wip_count="$(count_matches "cc:WIP\\|pm:依頼中\\|cursor:依頼中" "$PLANS_PATH")"
-  todo_count="$(count_matches "cc:TODO" "$PLANS_PATH")"
+  wip_count="$(count_matches "cc:wip\\|cc:WIP\\|pm:requested\\|pm:依頼中\\|cursor:依頼中" "$PLANS_PATH")"
+  todo_count="$(count_matches "cc:todo\\|cc:TODO" "$PLANS_PATH")"
 
   PLANS_INFO="📄 Plans.md: 進行中 ${wip_count} / 未着手 ${todo_count}"
 else
@@ -645,12 +645,14 @@ add_line ""
 add_line "## マーカー凡例"
 add_line "| マーカー | 状態 | 説明 |"
 add_line "|---------|------|------|"
-add_line "| \`cc:TODO\` | 未着手 | Impl（Claude Code）が実行予定 |"
-add_line "| \`cc:WIP\` | 作業中 | Impl が実装中 |"
+add_line "| \`cc:todo\` | 未着手 | Impl（Claude Code）が実行予定 |"
+add_line "| \`cc:wip\` | 作業中 | Impl が実装中 |"
+add_line "| \`cc:done\` | 完了 | Impl が作業完了、確認待ち |"
 add_line "| \`cc:blocked\` | ブロック中 | 依存タスク待ち |"
-add_line "| \`pm:依頼中\` | PM から依頼 | 2-Agent 運用時 |"
+add_line "| \`pm:requested\` | PM から依頼 | 2-Agent 運用時 |"
+add_line "| \`pm:approved\` | PM 確認済み | 2-Agent 運用時 |"
 add_line ""
-add_line "> **互換**: \`cursor:依頼中\` / \`cursor:確認済\` は \`pm:*\` と同義として扱います。"
+add_line "> **互換**: \`cc:TODO\` / \`cc:WIP\` / \`cc:完了\` / \`pm:依頼中\` / \`pm:確認済\` / \`cursor:*\` は読み取り可能です。"
 
 # ===== JSON 出力 =====
 # Claude Code の SessionStart hook は JSON 形式の hookSpecificOutput を受け付ける

@@ -48,9 +48,9 @@ fi
 COMPLETED_TASKS=0
 WIP_TASK_TITLE=""
 if [ -f "Plans.md" ]; then
-  COMPLETED_TASKS=$(grep -c "cc:完了" Plans.md 2>/dev/null || echo "0")
+  COMPLETED_TASKS=$(( $(grep -c "cc:done" Plans.md 2>/dev/null || echo "0") + $(grep -c "cc:完了" Plans.md 2>/dev/null || echo "0") ))
   # 現在のWIPタスクタイトルを取得（最初の1件）
-  WIP_TASK_TITLE=$(grep -E "^\s*-\s*\[.\]\s*\*\*.*\`cc:WIP\`" Plans.md 2>/dev/null | head -1 | sed 's/.*\*\*\(.*\)\*\*.*/\1/' || true)
+  WIP_TASK_TITLE=$(grep -E "^\s*-\s*\[.\]\s*\*\*.*\`cc:(WIP|wip)\`" Plans.md 2>/dev/null | head -1 | sed 's/.*\*\*\(.*\)\*\*.*/\1/' || true)
 fi
 
 # Agent Trace から直近の編集ファイル情報を取得
@@ -147,7 +147,7 @@ EOF
   # WIP タスク（存在すれば軽く抽出）
   WIP_TASKS=""
   if [ -f "Plans.md" ]; then
-    WIP_TASKS=$(grep -n "cc:WIP\|pm:依頼中\|cursor:依頼中" Plans.md 2>/dev/null | head -20 || true)
+    WIP_TASKS=$(grep -n "cc:WIP\|cc:wip\|pm:requested\|pm:依頼中\|cursor:依頼中" Plans.md 2>/dev/null | head -20 || true)
   fi
 
   {
