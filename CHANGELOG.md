@@ -6,6 +6,8 @@ Change history for claude-code-harness.
 
 ## [Unreleased]
 
+## [4.12.10] - 2026-05-28
+
 ### Fixed
 
 - Updated `harness-release` so a release is only complete after the release work is merged to the default branch and tags/GitHub Release are created from that branch-reachable commit.
@@ -4600,7 +4602,8 @@ Purpose: 自己修正ループ失敗時に「止まるだけ」から「次の�
 
 For v2.9.x and earlier, see [GitHub Releases](https://github.com/Chachamaru127/claude-code-harness/releases).
 
-[Unreleased]: https://github.com/Chachamaru127/claude-code-harness/compare/v4.12.9...HEAD
+[Unreleased]: https://github.com/Chachamaru127/claude-code-harness/compare/v4.12.10...HEAD
+[4.12.10]: https://github.com/Chachamaru127/claude-code-harness/compare/v4.12.9...v4.12.10
 [4.12.9]: https://github.com/Chachamaru127/claude-code-harness/compare/v4.12.8...v4.12.9
 [4.12.8]: https://github.com/Chachamaru127/claude-code-harness/compare/v4.12.7...v4.12.8
 [4.12.7]: https://github.com/Chachamaru127/claude-code-harness/compare/v4.12.6...v4.12.7
