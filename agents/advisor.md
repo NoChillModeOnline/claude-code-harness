@@ -10,7 +10,7 @@ disallowedTools:
   - Edit
   - Bash
   - Agent
-model: claude-opus-4-7
+model: claude-opus-4-6
 effort: xhigh
 maxTurns: 20
 color: purple
