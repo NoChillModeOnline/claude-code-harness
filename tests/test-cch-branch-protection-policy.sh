@@ -56,9 +56,9 @@ cat > "$TMP_DIR/review-required.json" <<'EOF'
 EOF
 
 if "$SCRIPT" --json "$TMP_DIR/review-required.json" > "$TMP_DIR/review-required.out" 2>&1; then
-  fail "policy script should reject GitHub human-review enforcement"
+  fail "policy script should reject drifted review settings"
 fi
-assert_contains "$TMP_DIR/review-required.out" "required_pull_request_reviews must stay null"
+assert_contains "$TMP_DIR/review-required.out" "required_pull_request_reviews must match the CCH review gate contract"
 
 cat > "$TMP_DIR/missing-check.json" <<'EOF'
 {

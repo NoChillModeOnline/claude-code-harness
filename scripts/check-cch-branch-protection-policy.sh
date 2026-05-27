@@ -1,6 +1,5 @@
 #!/bin/bash
-# Verify this repository keeps CCH's review gate policy:
-# harness-review/Codex companion approval + required CI checks, not GitHub human-review enforcement.
+# Verify this repository keeps branch settings aligned with CCH's review gate policy.
 
 set -euo pipefail
 
@@ -14,7 +13,7 @@ usage() {
 Usage: scripts/check-cch-branch-protection-policy.sh [--json PATH] [--repo OWNER/REPO] [--branch NAME]
 
 Checks:
-  - required_pull_request_reviews is null
+  - required_pull_request_reviews matches the CCH review gate contract
   - required status checks are strict and include actionlint, validate, test-go
   - force pushes and branch deletion are disabled
 
@@ -118,7 +117,7 @@ pass_check() {
 if jq -e '.required_pull_request_reviews == null' >/dev/null <<<"$json"; then
   pass_check "required_pull_request_reviews is null"
 else
-  fail_check "required_pull_request_reviews must stay null; CCH review gate is harness-review/Codex companion approval"
+  fail_check "required_pull_request_reviews must match the CCH review gate contract"
 fi
 
 if jq -e '.required_status_checks.strict == true' >/dev/null <<<"$json"; then
