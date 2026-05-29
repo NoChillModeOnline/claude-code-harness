@@ -8,6 +8,8 @@ Change history for claude-code-harness.
 
 ### Changed
 
+- **`/breezing` UX 軽量化 (Narration Rules + Cursor Backend Fast Path)**: 起動 → 委譲開始の体感を改善。`skills/breezing/SKILL.md` に「Narration Rules (UX Hard Contract)」セクションを追加し、過去経緯の振り返り / 事前宣言 / 同じ事実の 2 回言い換え / 中間ステータスラベル / 起動シーケンス中の ★ Insight ブロックを禁止する hard contract を明示。最初の text は `🚀 <backend> / <model> / <branch> / <task>` の 1 行 echo に固定（first text として 1 秒以内）。さらに `--cursor` lean path セクションで、Worker agent spawn (5-30s) / self_review 5 件ゲート (10-60s × retry) / sprint-contract 3 段チェーン (2-5s × N) / Phase 0 Q1-Q3 interactive (15-30s) / Effort スコアリング / Plans.md re-parse の削除根拠と節約秒数を表で固定し、合計 baseline 15-35s → target 3-7s の短縮目標を product contract に組み込んだ。`--cursor --reviewer-only` で Worker 完了済み・Reviewer のみ Composer に逃がす lean path も追加（Anthropic rate limit や Codex review 認証失敗時の fallback 用途）。mirror (codex/.codex/skills/, opencode/skills/) 同期済み。Cursor support tier は `internal-compatible` のまま不変。
+
 - **Opus 4.8 向けプロンプトチューニング**: Claude Code が Opus 4.8 で harness を動かす際の挙動ずれを、Anthropic の prompting best practices に沿って解消。worker/reviewer/scaffolder は Sonnet 4.6 のまま（tiered routing 維持）、VERSION は据え置き。
   - **effort スコアリングを「ultrathink 注入」から「effort tier 選択」に統一**（`harness-work`）。
     - 今まで: 複雑度スコア ≥3 で Worker spawn prompt 冒頭に `ultrathink` 文字列を注入していた。Opus 4.8 は free-text marker でなく `effort` で推論深度を制御する設計で、harness 内の `model-routing-policy.md` / `opus-4-7-prompt-audit.md` とも矛盾していた。
