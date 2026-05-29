@@ -241,6 +241,25 @@ firecrawl scrape "https://techblog.zozo.com/" -o /tmp/test.md
 2. CC を **完全再起動**（cmd+Q → 再起動）。sandbox 設定は session start 時に読まれる
 3. `FIRECRAWL_API_KEY` 環境変数が未設定の可能性。`.zshrc` を確認
 
+### filesystem.write を追加したのに `EPERM` が出る (`~/.xxx` で書込拒否)
+
+⚠️ **`~` は sandbox で展開されない**。`filesystem.write: ["~/.cursor"]` のように tilde を書くと、
+sandbox は文字列としてマッチを試みるため、実際に開かれる絶対パス `/Users/<user>/.cursor/...` と
+一致せず拒否される。
+
+修正: 必ず**絶対パス**で書く。
+
+```jsonc
+// ❌ 効かない
+"filesystem": { "write": ["~/.cursor"] }
+
+// ✅ 効く
+"filesystem": { "write": ["/Users/<user>/.cursor"] }
+```
+
+（cursor-agent backend の sandbox 要件として 2026-05-29 に実測確認。エラー例:
+`EPERM: open '/Users/<user>/.cursor/cli-config.json.tmp'`）
+
 ### 別のドメインが必要になった
 
 `allowedDomains` 配列に追加するだけ。CC 2.1.113+ では `*.example.com` の wildcard も使えるが、**漏れの可視性のため明示列挙を推奨**。
