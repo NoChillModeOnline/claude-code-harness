@@ -21,6 +21,7 @@ targets=(
   "scripts/setup-opencode.sh"
   "scripts/set-impl-backend.sh"
   "scripts/resolve-impl-backend.sh"
+  "scripts/cursor-companion.sh"
   "scripts/ci/check-checklist-sync.sh"
   "scripts/ci/check-consistency.sh"
   "scripts/ci/check-template-registry.sh"
