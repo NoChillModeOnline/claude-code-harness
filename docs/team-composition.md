@@ -41,6 +41,14 @@ Lead
 ここでいう「グループ」は、同じ commit にまとめても競合しない書き込み集合を指す。
 同じファイルを 2 worker に書かせる分割は禁止。
 
+### Opus 4.8 での spawn 明示
+
+Opus 4.8（host = Lead）はデフォルトで subagent を少なく spawn する傾向がある。
+そのため上の worker 数条件は **明示的な spawn トリガー**として扱う。
+
+- 独立した書き込みグループが 2 つあるのに「直接やった方が速い」で 1 worker に畳むのは、このケースでは誤り。グループ数 2 なら 2 worker、3 以上なら 3 worker を spawn する。
+- 逆に、1 ファイルで完結する作業や直列依存タスクは、subagent を増やさず Lead が直接進める。
+
 ## Worker stall 時の re-spawn (CC 2.1.113+)
 
 Lead は次の 2 条件のいずれかを満たしたら、同じ task を **最大 1 回** 再 spawn する。
