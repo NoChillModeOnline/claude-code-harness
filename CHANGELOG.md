@@ -6,6 +6,17 @@ Change history for claude-code-harness.
 
 ## [Unreleased]
 
+### Changed
+
+- **Opus 4.8 向けプロンプトチューニング**: Claude Code が Opus 4.8 で harness を動かす際の挙動ずれを、Anthropic の prompting best practices に沿って解消。worker/reviewer/scaffolder は Sonnet 4.6 のまま（tiered routing 維持）、VERSION は据え置き。
+  - **effort スコアリングを「ultrathink 注入」から「effort tier 選択」に統一**（`harness-work`）。
+    - 今まで: 複雑度スコア ≥3 で Worker spawn prompt 冒頭に `ultrathink` 文字列を注入していた。Opus 4.8 は free-text marker でなく `effort` で推論深度を制御する設計で、harness 内の `model-routing-policy.md` / `opus-4-7-prompt-audit.md` とも矛盾していた。
+    - 今後: スコアから effort tier（≥3 で `high`、code-risk を含む ≥3 で `xhigh`）を選び、`/effort` / frontmatter override で適用する。marker 文字列は注入しない。
+  - **code review を coverage 優先に明示**（`harness-review`）。Opus 4.8 は「low-severity は報告するな」を忠実に守り recall を落とすため、finding 段階は全件を severity + 確信度つきで記録し、gate は verdict 段階だけで行うことを明記。
+  - **subagent spawn を明示トリガー化**（`team-composition`）。Opus 4.8 は subagent を少なく spawn する傾向のため、worker 数条件（独立書込グループ数）を明示的な spawn トリガーとして扱うことを追記。
+  - **Opus model 参照を 4.8 へ更新**。`advisor.md`（`claude-opus-4-6` → `claude-opus-4-8`。4.7 化されず drift していたものを是正）、`model-routing-policy.md` の deep/review/advisor tier、`effort-level-policy.md` の thinking 概念（既定 off + adaptive thinking、`budget_tokens` deprecated）。
+  - **`opus-4-7-prompt-audit.md` に Opus 4.8 追補**。literal instruction following 向けに scope 明示条項と effort tier 指定条項を追加。
+
 ## [4.13.0] - 2026-05-29
 
 ### Added

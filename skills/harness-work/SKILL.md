@@ -179,18 +179,21 @@ cursor の write 委託は専用 `.git` を持つ worktree 内で実行し、Lea
 - `/harness-work all` → 全タスク、自動モード選択
 - `/harness-work 3-6` → 4件なので Breezing 自動選択
 
-## Effort レベル制御（v2.1.68+, v2.1.72, v2.1.111）
+## Effort レベル制御（Opus 4.8 / v2.1.111+）
 
-Claude Code v2.1.68 で Opus 4.6 は **medium effort** (`◐`) がデフォルト。
-v2.1.72 で `max` レベルが廃止され、3段階 `low(○)/medium(◐)/high(●)` に簡素化。
-`/effort auto` でデフォルトにリセット可能。
-複雑なタスクには `ultrathink` キーワードで high effort (`●`) を有効化する。
-CC 2.1.111 では Opus 4.7 向けに `xhigh` が追加された。
-必要なら literal に `/effort xhigh` を上乗せしてよい。
+effort はモデルの推論強度を選ぶ正式なノブ。`low(○)/medium(◐)/high(●)/xhigh` の 4 段階で、
+`/effort auto` でデフォルトにリセットできる（`max` は v2.1.72 で廃止、`xhigh` が後継）。
+
+Opus 4.8 では thinking は既定 off で、effort が推論深度の主レバー（過去のどの Opus より effort の影響が大きい）。
+「浅い推論」を観測したら prompt で回避せず effort を上げる。
+そのため複雑タスクの強化は **free-text marker（旧 `ultrathink`）を spawn prompt に注入する方式を廃止**し、
+複雑度スコアから **Worker spawn の effort tier を選ぶ**方式に統一する。
+これは `docs/model-routing-policy.md`（effort を free-text から推測しない）と
+`.claude/rules/opus-4-7-prompt-audit.md` 合格条件 5（`xhigh` は呼び出し側が選ぶ）と整合する。
 
 ### 多要素スコアリング
 
-タスク着手時に以下のスコアを合算し、**閾値 3 以上**で ultrathink を注入:
+タスク着手時に以下のスコアを合算する。
 
 | 要素 | 条件 | スコア |
 |------|------|--------|
@@ -198,12 +201,24 @@ CC 2.1.111 では Opus 4.7 向けに `xhigh` が追加された。
 | ディレクトリ | core/, guardrails/, security/ を含む | +1 |
 | キーワード | architecture, security, design, migration を含む | +1 |
 | 失敗履歴 | agent memory に同タスクの失敗記録あり | +2 |
-| 明示指定 | PM テンプレートに ultrathink 記載あり | +3（自動採用） |
+| 明示指定 | PM テンプレートに `effort: high` / `effort: xhigh`（旧 `ultrathink` も互換受理）記載あり | +3（自動採用） |
 
-### 注入方法
+### effort tier の決め方（注入しない）
 
-スコア ≥ 3 の場合、Worker spawn prompt の冒頭に `ultrathink` を追加。
-breezing モードでも同じロジックが適用される（harness-work が一本化して管理）。
+スコアから effort tier を **escalation signal** として決める（`ultrathink` 等の marker 文字列を spawn prompt に **書かない**）。
+適用 lever は次の 2 つだけ:
+
+- **session `/effort`**: 複雑タスクのバッチに入る前に host が `/effort high` / `/effort xhigh` を設定する（session 単位で効く確実な lever）。
+- **worker frontmatter**: `agents/worker.md` の `effort`（既定 `medium`）が floor。CC の Agent / Task spawn API は per-spawn の effort 指定を公開しないため、worker 1 体ごとに effort を上げる機構はない。スコアは `worker-report.v1` の `task_complexity_note` に記録し、Lead が session effort 引き上げの判断材料にする。
+
+| スコア | code-risk（core/guardrails/security/architecture/migration を含む） | effort tier |
+|--------|-----------------------------------|-------------|
+| 0-2 | 不問 | `medium`（Worker frontmatter 既定のまま） |
+| ≥ 3 | なし | `high` |
+| ≥ 3 | あり | `xhigh` |
+
+breezing モードでも同じロジックを適用する（harness-work が一本化して管理）。
+Worker は Sonnet 4.6 のため `xhigh` は実効 `high` にダウングレードされるが、tier 引き上げ自体は有効（`docs/effort-level-policy.md`）。
 
 ## 実行モード詳細
 
@@ -353,7 +368,7 @@ Lead (this agent)
 **Phase A: Pre-delegate（準備）**:
 1. Plans.md を読み込み、対象タスクを特定
 2. 依存グラフを解析し、実行順序を決定（Depends カラム）
-3. 各タスクの effort スコアリング（ultrathink 注入判定）
+3. 各タスクの effort スコアリング（effort tier 判定 — high/xhigh）
 4. `node "${HARNESS_PLUGIN_ROOT}/scripts/generate-sprint-contract.js"` で `sprint-contract.json` を生成
 5. `bash "${HARNESS_PLUGIN_ROOT}/scripts/enrich-sprint-contract.sh"` で Reviewer 観点を加え、`bash "${HARNESS_PLUGIN_ROOT}/scripts/ensure-sprint-contract-ready.sh"` で未承認なら停止
 
