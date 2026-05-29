@@ -207,8 +207,9 @@ The harness has three implementation execution backends:
   This is the same delegation pattern as `codex`, not a model-provider bridge.
 
 Backend selection precedence (highest first): a per-command flag (e.g.
-`--backend cursor`) overrides the `HARNESS_IMPL_BACKEND` env var (persisted in
-`env.local`), which overrides the default `claude`.
+`--backend cursor`) > the `HARNESS_IMPL_BACKEND` env var > the project
+`env.local` entry > the user-scope `~/.config/claude-harness/impl-backend.env`
+entry > the default `claude`. Project scope overrides user scope.
 
 Backend is role-scoped: only the implementation (worker) role uses the selected
 backend. The review and advisor roles stay on the brain (Opus / `claude` host)

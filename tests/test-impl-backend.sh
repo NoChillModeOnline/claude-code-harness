@@ -19,6 +19,10 @@ fail() {
 # 隔離した一時 env.local を用意する（TMPDIR を尊重する）
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/impl-backend-test.XXXXXX")"
 export HARNESS_ENV_LOCAL="${TMP_DIR}/env.local"
+# ユーザースコープも先頭で隔離する。実 ~/.config/claude-harness/impl-backend.env を
+# 読みに行くと、opt-in 済みマシンで (a)-(h) の default 判定が壊れる
+# （active-watching-test-policy: optional user-scope config を隔離せず依存しない）。
+export HARNESS_USER_BACKEND_FILE="${TMP_DIR}/user-backend"
 
 cleanup() {
   rm -rf "${TMP_DIR}"
@@ -128,7 +132,6 @@ got="$(env -u HARNESS_IMPL_BACKEND bash "$RESOLVE" 2>/dev/null)"
 # ---------------------------------------------------------------------------
 # ユーザースコープ（--user / HARNESS_USER_BACKEND_FILE）
 # ---------------------------------------------------------------------------
-export HARNESS_USER_BACKEND_FILE="${TMP_DIR}/user-backend"
 reset_user() { rm -f "${HARNESS_USER_BACKEND_FILE}"; }
 
 # (i) project / env / flag が無いとき user file の値を使う

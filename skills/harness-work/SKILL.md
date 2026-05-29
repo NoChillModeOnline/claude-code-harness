@@ -80,7 +80,7 @@ run 開始時に 1 回だけ解決する:
 bash "${HARNESS_PLUGIN_ROOT}/scripts/resolve-impl-backend.sh"
 ```
 
-precedence（高い順）: `--backend <v>` / `--cursor` / `--codex` フラグ > `HARNESS_IMPL_BACKEND` 環境変数 > `env.local` の同名行 > 既定値 `claude`。
+precedence（高い順）: `--backend <v>` / `--cursor` / `--codex` フラグ > `HARNESS_IMPL_BACKEND` 環境変数 > プロジェクト `env.local` の同名行 > ユーザー `~/.config/claude-harness/impl-backend.env` の同名行 > 既定値 `claude`。プロジェクト設定はユーザースコープを上書きする。
 明示フラグ（`--backend` / `--cursor` / `--codex`）は env / file / default を常に上書きする。
 
 ### role-scoped 制約
