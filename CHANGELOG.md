@@ -12,6 +12,15 @@ Change history for claude-code-harness.
   - 安全境界は専用 `.git` worktree + Lead の diff レビュー + cherry-pick（R01-R13）。Cursor の allowlist は公式に best-effort のため依存せず、cursor 出力は untrusted 扱い。読取委譲は `--mode ask`、`--force`/Run Everything は不使用。
   - Cursor は `candidate` のまま（consumer 配布・公開 support claim なし、ローカル opt-in）。
   - 新規: `scripts/resolve-impl-backend.sh`, `scripts/cursor-companion.sh`, `.claude/rules/cursor-cli-only.md`、spec.md「Execution Backend Contract」。`harness-work`/`breezing`/`worker.md` に 3-way backend スイッチを配線。
+- **`cursor-companion.sh --debug` 観測経路（デバッグ用）**: `--debug` フラグ または `HARNESS_CURSOR_DEBUG=1` 環境変数で、(a) `model-routing.sh` の stderr、(b) 実行直前の cmd 配列（`--api-key` / `--auth-token` / `Authorization:` 値を `[REDACTED]` にマスク）、(c) cursor-agent の stderr を `[cursor-companion DEBUG]` prefix で stderr に出す。既定挙動（DEBUG=0）は不変・後方互換。
+
+### Changed
+
+- **`scripts/resolve-impl-backend.sh` / `scripts/set-impl-backend.sh`**: shellcheck SC2295 / SC2005 を解消（内部 hygiene、挙動不変）。
+
+### Documentation
+
+- **Cursor ACP（Agent Client Protocol）= 不採用**を `docs/research/cursor-adapter-candidate.md` に判断と再評価条件付きで記録。ACP は双方向 streaming プロトコルで harness の whole-task 委譲には過剰。streaming UX / 非 Cursor IDE への埋込 / per-action permission gating のいずれかが要件化したら再評価。Cursor は `candidate` のまま。
 
 ## [4.12.11] - 2026-05-28
 
