@@ -196,6 +196,38 @@ If a host is not observed in the current runtime, Harness must say `unknown` or
 `not observed`, not `unsupported`, unless the relevant source of truth was
 checked.
 
+## Execution Backend Contract
+
+The harness has three implementation execution backends:
+
+- `claude` (default): the Claude Task subagent.
+- `codex` (existing): whole-task delegation via `scripts/codex-companion.sh`.
+- `cursor` (candidate): whole-task delegation to
+  `cursor-agent --model composer-2.5-fast` via `scripts/cursor-companion.sh`.
+  This is the same delegation pattern as `codex`, not a model-provider bridge.
+
+Backend selection precedence (highest first): a per-command flag (e.g.
+`--backend cursor`) overrides the `HARNESS_IMPL_BACKEND` env var (persisted in
+`env.local`), which overrides the default `claude`.
+
+Backend is role-scoped: only the implementation (worker) role uses the selected
+backend. The review and advisor roles stay on the brain (Opus / `claude` host)
+so the implementing backend never reviews its own output.
+
+The concrete model for any host+role is resolved by
+`scripts/model-routing.sh --host <backend> --role <role>`. This contract does
+not reimplement model selection.
+
+Cursor stays `candidate`: opt-in only, with no public support claim, and is not
+distributed (distribution prerequisites are tracked separately). Write
+delegation is governed by `.claude/rules/cursor-cli-only.md`.
+
+Containment for cursor write delegation relies on a dedicated-`.git` worktree
+plus Lead diff review and cherry-pick as the real boundary. Per Cursor's
+official security docs (cursor.com/docs/agent/security), file writes have no
+project-folder confinement and command allowlists are "best-effort, not a
+security guarantee", so containment cannot be delegated to Cursor.
+
 ## Onboarding Contract
 
 Onboarding is not complete when files are copied. It is complete when the first
