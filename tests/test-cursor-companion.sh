@@ -133,6 +133,19 @@ if grep -qE -- "--force|--yolo" "${ARGS_FILE}"; then
 fi
 
 # ---------------------------------------------------------------------------
+# (e2) --trust は read-only / write のどちらでも構築される（headless 動作に必須）。
+#      --trust は workspace 信頼付与のみで、--force/--yolo（コマンド自動実行）とは別物。
+# ---------------------------------------------------------------------------
+make_mock '{"is_error":false,"result":"DONE"}' 0
+run_wrapper task "do the thing" >/dev/null 2>&1
+grep -q -- "--trust" "${ARGS_FILE}" \
+  || fail "(e2) read-only must build --trust (headless 必須), args were: $(cat "${ARGS_FILE}")"
+make_mock '{"is_error":false,"result":"DONE"}' 0
+run_wrapper task --write --workspace "${WORKSPACE_DIR}" "do the thing" >/dev/null 2>&1
+grep -q -- "--trust" "${ARGS_FILE}" \
+  || fail "(e2) write mode must build --trust (headless 必須), args were: $(cat "${ARGS_FILE}")"
+
+# ---------------------------------------------------------------------------
 # (f) --write without --workspace → exit 2 (guard)
 # ---------------------------------------------------------------------------
 make_mock '{"is_error":false,"result":"DONE"}' 0

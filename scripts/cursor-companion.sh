@@ -176,11 +176,14 @@ if [ -z "${CURSOR_AGENT}" ]; then
 fi
 
 # ---- コマンド構築 ---------------------------------------------------------
-# 共通: -p（print/headless）+ JSON 出力 + model。
+# 共通: -p（print/headless）+ JSON 出力 + model + --trust。
+# --trust は headless で workspace を信頼して動作させるために必須（未指定だと
+# 「untrusted directory」で拒否される）。これは workspace の信頼付与のみで、
+# --force / --yolo（= Run Everything: コマンド自動実行）とは別物。コマンド自動実行は
+# 引き続き ~/.cursor/permissions.json の allowlist に委ね、--force / --yolo は決して付けない。
 # read-only（default）: --mode ask（hard read-only stop）。
 # write: --mode ask を付けない（auto-run は permissions.json に委ねる）。
-# どちらの場合も --force / --yolo は決して付けない。
-cmd=("${CURSOR_AGENT}" -p --output-format json --model "${MODEL}")
+cmd=("${CURSOR_AGENT}" -p --output-format json --model "${MODEL}" --trust)
 if [ "${WRITE}" -eq 0 ]; then
   cmd+=(--mode ask)
 fi
