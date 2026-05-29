@@ -88,6 +88,46 @@ Not observed in this repo's smoke (2026-05-28):
 | Support claim | Never implies Cursor adapter support | Remains `candidate` until smoke + preflight pass |
 | Verification | Branch + marker sanity | `bash tests/test-cursor-adapter-candidate.sh` |
 
+## cursor-agent CLI fact-check (local, no network)
+
+Local inspection of the `cursor-agent` CLI at `~/.local/bin/cursor-agent`
+(version `2026.05.28-a70ca7c`). Confirmed facts come from `cursor-agent --help`
+and the model router contract; nothing here was exercised against the Cursor
+cloud, so model-call behavior stays `⏳ needs-network`.
+
+| Claim | Status | Source |
+|---|---|---|
+| `cursor-agent` binary present at `~/.local/bin/cursor-agent` | ✅ confirmed-local | `command -v cursor-agent` |
+| Version is `2026.05.28-a70ca7c` | ✅ confirmed-local | `cursor-agent --version` |
+| Flags `-p/--print`, `--output-format text\|json\|stream-json`, `--model` exist | ✅ confirmed-local | `cursor-agent --help` |
+| Flags `-f/--force`, `--yolo`, `--mode plan\|ask`, `--resume`, `--continue` exist | ✅ confirmed-local | `cursor-agent --help` |
+| Flags `--list-models`, `--sandbox enabled\|disabled`, `--trust`, `--workspace`, `-w/--worktree` exist | ✅ confirmed-local | `cursor-agent --help` |
+| Auth via `--api-key` / `CURSOR_API_KEY`; headers via `-H/--header`; `--approve-mcps`, `--plugin-dir` exist | ✅ confirmed-local | `cursor-agent --help` |
+| macOS has no `timeout` / `gtimeout` (probe wrappers cannot rely on them) | ✅ confirmed-local | local shell environment |
+| Model router exposes cursor tiers `composer-2.5-fast` and `composer-2-fast` but **no bare `composer-2.5` slug** | ✅ confirmed-local | `scripts/model-routing.sh --host cursor` |
+| `composer-2.5` / `composer-2.5-fast` are actually callable end-to-end | ⏳ needs-network | requires a live `cursor-agent` model invocation |
+| The `.result` JSON schema (shape of `--output-format json`) | ⏳ needs-network | requires a live model run |
+| Whether a chat-completions style API is exposed | ⏳ needs-network | see Route B note — unfalsifiable negative, not relied upon |
+| Latency numbers for model calls | ⏳ needs-network | requires timed live runs |
+| Cursor cloud egress hostnames | ⏳ needs-network | requires observing a live run's network traffic |
+
+### Route B: out of verification scope
+
+Route B (a local OpenAI-compatible bridge wrapping `cursor-agent`) is out of
+verification scope because of the double-agent problem: `cursor-agent` is itself
+a full agent, so a host's tool-calling protocol cannot pass through it. Only the
+final `.result` text returns, which effectively kills the host agent loop.
+Verifying Route B would therefore prove nothing that Route A does not already
+establish.
+
+Keeping `not_observed != absent` discipline: the absence of an observed
+chat-completions API is an unfalsifiable negative and is **not** relied upon as
+proof. No claim here asserts "no chat-completions API" as proven.
+
+This fact-check inspects the local CLI only. It does **not** promote Cursor
+beyond the `candidate` tier and adds no support claim; the candidate boundary in
+the Conclusion and Evidence Boundary sections is unchanged.
+
 ## Promotion Conditions
 
 Cursor can move beyond `candidate` only after all of the following in the same
