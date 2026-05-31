@@ -9,27 +9,46 @@ description: "Delegate a single write task to Cursor Composer via cursor-compani
 
 封じ込めは Cursor 側にはない (`.claude/rules/cursor-cli-only.md`)。**専用 `.git` を持つ worktree + Lead diff review + cherry-pick (R01-R13 経路)** の 3 点だけが実効的な境界。cursor の出力は Lead レビューまで untrusted として扱う。
 
-## Step 0 — NARRATION RULES (UX Hard Contract)
+## Step 0 — NARRATION RULES (UX Contract)
 
-このスキルは「起動 → 委譲開始」を 3 秒以内に進めるため、中間ナレーションを禁ずる。breezing と同じ契約。違反は UX 不合格として扱う。
+敵は **冗長さ** であって進捗報告ではない。breezing と同じ契約。**起動時に banner + 実行計画を簡潔に明示してから実行する**。見やすい進捗報告は歓迎、冗長な繰り返しのみ禁止。
 
-- **過去経緯の振り返り禁止**: 「先ほど止まった」「前回 Worker は…」を語らない。Plans.md / git から直読する
-- **事前宣言禁止**: 「使い方を確認します」「次は X を確認します」を出さない。tool call 自体が宣言
-- **同じ事実の 2 回言い換え禁止**: pre-check 結果を後段で再説明しない
-- **中間ステータスラベル禁止**: 「実行中」「実行済み」「次は…」を出さない
-- **★ Insight ブロック禁止 (起動シーケンス中)**: Insight は最終 report で 1 回のみ可
-- **最初の text は 1 行のみ**: Step 1 の `🚀 cursor / composer-2.5-fast / <branch> / <task>` を first text として 1 秒以内に出す
+### 起動時に必ず出すもの (banner + plan、合計 5 行以内)
 
-違反例:
 ```
-× 「composer 2.5 で実装する流れですね、まず確認します」
-× 「Cursor を呼ぶ前に branch を見ます」 → bash → 「branch を確認しました」
+🚀 cursor / composer-2.5-fast / feat/foo-bar / Add login form validation
+これから:
+1. pre-check (branch / cursor-agent) → 専用 worktree 作成
+2. composer に実装委譲 (--write)
+3. diff レビュー → cherry-pick → Plans.md 更新
+```
+
+banner 1 行 (`🚀 cursor / composer-2.5-fast / <branch> / <task>`) + 計画 2-4 行。1 秒以内に出し、即 Step 1 へ。
+
+### 進捗報告は出してよい (見やすい範囲で)
+
+- 各ステップの開始・完了を 1 行ステータスで (`✓ worktree 作成: .claude/worktrees/cursor-do-...`)
+- pre-check / resolve の要点、cherry-pick した SHA
+- なぜこの分岐を取るかの理由を 1 行で
+
+### 禁止 (= 冗長さ)
+
+- **同じ事実の 2 回言い換え**: pre-check 結果を後段で再説明しない
+- **中身のない前置き**: tool call で自明な宣言だけの行
+- **3 行以上の経緯振り返り**: 必要なら 1 行に圧縮
+- **起動シーケンス中の ★ Insight ブロック**: Insight は最終 report で 1 回のみ
+
+違反例 (冗長):
+```
+× 「composer 2.5 で実装する流れですね、まず確認します」（中身のない前置き）
+× 「Cursor を呼ぶ前に branch を見ます」 → bash → 「branch を確認しました」（言い換え）
 × ★ Insight ──── Cursor の強みは…
 ```
 
-正常例:
+正常例 (簡潔 + 計画明示):
 ```
 🚀 cursor / composer-2.5-fast / feat/foo-bar / Add login form validation
+これから: worktree 作成 → composer に実装委譲 → diff レビュー → cherry-pick
 ```
 
 ## Step 1 — first text echo (1 行、1 秒以内)
@@ -46,7 +65,7 @@ CURSOR_DO_AWAITING_TASK: provide a one-line task description as $ARGUMENTS
 🚀 cursor / composer-2.5-fast / <current-branch> / <task-first-60-chars>
 ```
 
-`<current-branch>` は Step 2 で取得する値だが、Step 1 では未取得のため `…` でも可。Step 2 直後に確定値を 1 行で再出力する。**この echo 以外の text を Step 2 まで一切出さない。**
+`<current-branch>` は Step 2 で取得する値だが、Step 1 では未取得のため `…` でも可。Step 2 直後に確定値を 1 行で再出力する。Step 0 の banner + 実行計画 (5 行以内) はここで出し切り、以降は各ステップの 1 行ステータスで進捗を見せる。冗長な繰り返しのみ避ける。
 
 ## Step 2 — 並列 pre-check (1 bash)
 

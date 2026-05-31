@@ -6,6 +6,15 @@ Change history for claude-code-harness.
 
 ## [Unreleased]
 
+### Changed
+
+- **`/breezing` / `/cursor:ask` / `/cursor:do` の起動ナレーションを「計画明示型」に緩和**: v4.13.2 で導入した Narration Rules が「最初の text は 1 行のみ・中間ナレーション一切禁止」と振り切れすぎ、起動後に何も表示されず「今から何をするのか分からない」状態だった。3 skill の Narration Rules を「**起動時に banner + 実行計画 (2-4 step、合計 5 行以内) を明示してから実行開始**」に書き換え、見やすい進捗報告 (各ステップの 1 行ステータス・判断に必要な中間結果・1 行の経緯) を明示的に許可。禁止対象は **冗長さ** (同じ事実の 2 回言い換え / 中身のない前置き / 3 行以上の経緯振り返り / 起動シーケンス中の ★ Insight ブロック) のみに限定。
+
+  - 今まで: `🚀 cursor / composer-2.5-fast / ask` の 1 行だけ出して即委譲。ユーザーは進行中の処理が見えず不安。
+  - 今後: banner の直後に「これから: backend resolve → composer に diff レビュー委譲 → verdict 要約」のような実行計画を添え、各ステップ完了を 1 行で報告する。冗長な繰り返しだけを避ける。
+
+---
+
 ### テーマ: セッション協調 (file lease + register + broadcast 復活)
 
 **同一 PC 上の複数 Claude Code セッションが、同じ repo の同じファイルを黙って上書きし合う事故を、ファイル単位 lease と continueOnBlock feedback で防ぐ。harness-mem に依存せずローカル完結。**
