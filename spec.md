@@ -305,7 +305,9 @@ Rules:
   `.cursor-plugin/`, `codex/`, `.cursor/`, or other non-Claude adapter
   manifests.
 - A Codex distribution package must expose only Codex skills and a Codex plugin
-  manifest whose component paths stay inside the package root.
+  manifest whose component paths stay inside the package root. It may carry
+  non-manifest setup source assets used by `cursor:setup`, but must not include
+  `.cursor-plugin/` or `.cursor/` at the Codex package root.
 - A Cursor distribution package must expose only Cursor skills, agents, and a
   Cursor plugin manifest whose component paths stay inside the package root.
 - Distribution manifests must not use `..` relative paths. Source-repo adapter

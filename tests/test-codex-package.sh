@@ -175,9 +175,6 @@ codex_dist_tmp="$(mktemp -d)"
 if bash scripts/build-host-plugin-dist.sh --host codex --out "${codex_dist_tmp}" >/tmp/codex-host-dist.$$ 2>&1; then
   required_codex_dist_paths=(
     ".codex-plugin/plugin.json"
-    ".cursor-plugin/plugin.json"
-    ".cursor/AGENTS.md"
-    ".cursor/agents/worker.md"
     "cursor-skills/breezing/SKILL.md"
     "cursor-skills/harness-work/SKILL.md"
     "skills/cursor-do/SKILL.md"
@@ -200,6 +197,10 @@ if bash scripts/build-host-plugin-dist.sh --host codex --out "${codex_dist_tmp}"
       codex_dist_ok=false
     fi
   done
+  if [ -e "${codex_dist_tmp}/.cursor-plugin" ] || [ -e "${codex_dist_tmp}/.cursor" ]; then
+    echo "  generated Codex package must not expose Cursor manifests or .cursor bootstrap files"
+    codex_dist_ok=false
+  fi
   if ! HARNESS_PROJECT_ROOT="${codex_dist_tmp}" HARNESS_CURSOR_DIST="${codex_dist_tmp}/cursor-check" \
     bash "${codex_dist_tmp}/scripts/setup-cursor.sh" --check >/tmp/codex-cursor-setup-check.$$ 2>&1; then
     echo "  setup-cursor --check failed inside generated Codex package"

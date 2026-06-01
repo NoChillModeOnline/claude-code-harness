@@ -59,6 +59,7 @@ assert_present "$CODEX_OUT" ".codex-plugin/plugin.json"
 assert_present "$CODEX_OUT" "skills/harness-plan/SKILL.md"
 assert_absent "$CODEX_OUT" ".claude-plugin"
 assert_absent "$CODEX_OUT" ".cursor-plugin"
+assert_absent "$CODEX_OUT" ".cursor"
 
 assert_present "$CURSOR_OUT" ".cursor-plugin/plugin.json"
 assert_present "$CURSOR_OUT" "skills/harness-work/SKILL.md"
