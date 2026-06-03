@@ -265,6 +265,63 @@ official security docs (cursor.com/docs/agent/security), file writes have no
 project-folder confinement and command allowlists are "best-effort, not a
 security guarantee", so containment cannot be delegated to Cursor.
 
+## Orchestration Visibility Contract
+
+Backend selection is invisible at runtime: a user cannot tell whether work was
+delegated to Codex, Cursor, or kept on Claude. The harness must make the
+session's actual backend mix observable, so a user can answer "am I really
+orchestrating, or did everything fall back to Claude?" and can show the result
+to others.
+
+The contract separates recording from display. Recording is always on; display
+is on demand. The harness keeps two scopes: a per-session ledger of the current
+session's delegations, and a lifetime accumulator that persists cumulative
+per-backend totals across sessions in `.claude/state/orchestration-totals.json`
+(project-scoped). Session delegations roll up into the accumulator when the session's tasks are
+all complete, and again at session end as a safety net; the rollup always runs
+and is never gated behind display. The rollup must
+be idempotent per `session_id` so a session counted once is never
+double-counted. A user-scope total across all projects is an optional extension,
+not required here.
+
+Per-task completion never triggers display; that would spam a multi-task
+session. The one allowed automatic surface is a single compact terminal summary,
+emitted once when the session's tasks are all complete (the rollup runs first,
+so the summary reflects the updated lifetime totals). The HTML scorecard is
+never emitted automatically. Surfaces report both the current session mix and
+the lifetime totals; the lifetime totals are the primary shareable figure.
+
+The authoritative record is a companion-written ledger. `codex-companion.sh` and
+`cursor-companion.sh` append one structured line per delegation to
+`.claude/state/orchestration-ledger.jsonl`. Each entry carries only
+non-sensitive fields: timestamp, backend, subcommand, write flag, exit code,
+duration, session id, and a `counts` flag. The ledger must never contain prompt
+text, file contents, or secrets. Only delegation subcommands (`task`, `review`,
+`adversarial-review`) set `counts: true`; status/setup/result/cancel calls are
+recorded with `counts: false` so polling does not inflate the score.
+
+Claude-side work is not companion-driven, so the scorecard derives Claude
+delegation counts from the existing worker spawn trace
+(`.claude/state/agent-trace.jsonl`, role `worker`) and merges them with the
+ledger. The merged result is an `orchestration-scorecard.v1` snapshot reporting,
+per backend: the used count, and a tri-state status — `used` (count > 0),
+`available` (backend resolves/configures but unused this session), or
+`not-configured` (companion setup fails or binary absent). `not-configured` is a
+neutral state, never a failure or warning. The snapshot also reports backend
+diversity (how many distinct backends were actually used) and a multi-backend
+utilization ratio (non-Claude delegations over total delegations) with a one-line
+note stating what the ratio measures.
+
+Two surfaces consume the snapshot: a standalone HTML scorecard rendered through
+`scripts/render-html.sh` (redaction layers applied as defense-in-depth, so it is
+shareable), produced only on demand; and a compact terminal summary, produced on
+demand and additionally emitted once at full-session completion. Neither is
+emitted on every task completion. Both report session mix plus lifetime totals.
+
+If the ledger or trace is missing or unreadable, the scorecard degrades to
+"no delegations observed" rather than erroring; absent observation is not the
+same as absence of work.
+
 ## Onboarding Contract
 
 Onboarding is not complete when files are copied. It is complete when the first
