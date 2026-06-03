@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/Chachamaru127/claude-code-harness/go/internal/orchestration"
 )
 
 // CleanupHandler は SessionEnd フックハンドラ。
@@ -20,7 +22,8 @@ type CleanupHandler struct {
 
 // cleanupInput は SessionEnd フックの stdin JSON。
 type cleanupInput struct {
-	CWD string `json:"cwd,omitempty"`
+	CWD       string `json:"cwd,omitempty"`
+	SessionID string `json:"session_id,omitempty"`
 }
 
 // cleanupResponse はクリーンアップ結果のレスポンス。
@@ -70,6 +73,10 @@ func (h *CleanupHandler) Handle(r io.Reader, w io.Writer) error {
 
 	// inbox-*.tmp ファイルをクリーンアップ
 	h.cleanupGlob(stateDir, "inbox-*.tmp")
+
+	// Phase 90: safety-net rollup of this session into the lifetime orchestration
+	// accumulator (idempotent with the TaskCompleted rollup). Record-only, fail-open.
+	orchestration.Run(resolveProjectRoot(inp.CWD), inp.SessionID)
 
 	return writeJSON(w, cleanupResponse{Continue: true, Message: "Session cleanup completed"})
 }

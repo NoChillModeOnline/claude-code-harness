@@ -35,6 +35,17 @@ __orch_ledger_path() {
   printf '%s/.claude/state/orchestration-ledger.jsonl' "${root}"
 }
 
+# Resolve the lifetime totals path. HARNESS_ORCHESTRATION_TOTALS overrides for tests.
+__orch_totals_path() {
+  if [ -n "${HARNESS_ORCHESTRATION_TOTALS:-}" ]; then
+    printf '%s' "${HARNESS_ORCHESTRATION_TOTALS}"
+    return 0
+  fi
+  local root
+  root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  printf '%s/.claude/state/orchestration-totals.json' "${root}"
+}
+
 # Milliseconds since epoch. macOS `date` has no %N, so use second precision * 1000.
 __orch_now_ms() {
   local s

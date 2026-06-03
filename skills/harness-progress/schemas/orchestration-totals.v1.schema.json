@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "orchestration-totals.v1",
+  "title": "Orchestration Lifetime Totals (v1)",
+  "description": "Project-scoped cumulative per-backend delegation totals, accumulated across sessions by scripts/orchestration-rollup.sh. The rollup is idempotent per session_id (rolled_up_sessions) so completion + session-end + re-runs never double-count. Record-only; the scorecard reads this for the lifetime figure.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "totals", "rolled_up_sessions", "first_seen", "last_seen"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version."
+    },
+    "totals": {
+      "type": "object",
+      "description": "Cumulative count of counted delegations per backend across all rolled-up sessions.",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "rolled_up_sessions": {
+      "type": "array",
+      "description": "Session ids already folded into totals. Membership makes the rollup idempotent.",
+      "items": { "type": "string" }
+    },
+    "first_seen": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "UTC timestamp of the first rollup (ISO 8601). Null before any rollup."
+    },
+    "last_seen": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "UTC timestamp of the most recent rollup (ISO 8601)."
+    }
+  }
+}

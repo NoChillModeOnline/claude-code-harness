@@ -14,6 +14,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/Chachamaru127/claude-code-harness/go/internal/orchestration"
 )
 
 // taskCompletedInput は TaskCompleted フックの stdin JSON。
@@ -32,6 +34,7 @@ type taskCompletedInput struct {
 	StopReasonSnake string `json:"stop_reason"`
 	CWD             string `json:"cwd"`
 	ProjectRoot     string `json:"project_root"`
+	SessionID       string `json:"session_id"`
 }
 
 // taskCompletedHandler は task-completed の全状態を保持する。
@@ -163,6 +166,9 @@ func (h *taskCompletedHandler) handle(input taskCompletedInput, rawData []byte, 
 	// 全タスク完了判定
 	if totalTasks > 0 && completedCount >= totalTasks {
 		h.maybeFinalizeHarnessMem(ts)
+		// Phase 90: fold this session into the lifetime orchestration accumulator
+		// before any completion summary. Record-only and fail-open.
+		orchestration.Run(h.projectRoot, input.SessionID)
 		resp := map[string]interface{}{
 			"continue":   false,
 			"stopReason": "all_tasks_completed",
