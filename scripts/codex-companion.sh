@@ -27,6 +27,16 @@ PRIMARY_ENV_GUARD="${SCRIPT_DIR}/codex-primary-environment-guard.sh"
 MODEL_ROUTER="${SCRIPT_DIR}/model-routing.sh"
 EXECUTION_ROOT="${HARNESS_CODEX_EXECUTION_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 
+# Orchestration ledger (Phase 90): record each delegation for the scorecard.
+# This path exec()s into codex/node, so exit_code/duration are recorded null.
+if [ -f "${SCRIPT_DIR}/lib/orchestration-ledger.sh" ]; then
+  # shellcheck source=scripts/lib/orchestration-ledger.sh
+  . "${SCRIPT_DIR}/lib/orchestration-ledger.sh" 2>/dev/null || true
+fi
+if ! command -v orch_emit_ledger >/dev/null 2>&1; then
+  orch_emit_ledger() { return 0; }
+fi
+
 is_valid_codex_effort() {
   case "${1:-}" in
     none|minimal|low|medium|high|xhigh) return 0 ;;
@@ -261,6 +271,15 @@ fi
 # calculate-effort.sh が存在しない場合は CODEX_EFFORT 環境変数（デフォルト: medium）を使う。
 SUBCOMMAND="${1:-}"
 guard_primary_environment_if_needed "$@"
+
+# Record this delegation before exec (codex exec()s into node/codex, so
+# exit_code/duration cannot be captured here and are recorded null). counts is
+# derived from the subcommand; status/setup/result/cancel are recorded counts=false.
+if [ -n "${SUBCOMMAND}" ]; then
+  __orch_codex_write=0
+  if task_has_write_intent "$@"; then __orch_codex_write=1; fi
+  orch_emit_ledger "codex" "${SUBCOMMAND}" "${__orch_codex_write}" "" "" || true
+fi
 if should_use_structured_task_exec "$@"; then
   STRUCTURED_TASK_EXEC=1
 else

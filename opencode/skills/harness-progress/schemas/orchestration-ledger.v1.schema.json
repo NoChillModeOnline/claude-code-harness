@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "orchestration-ledger.v1",
+  "title": "Orchestration Ledger Entry (v1)",
+  "description": "One append-only line per backend delegation, written by codex-companion.sh / cursor-companion.sh. Records only fixed, non-sensitive scalars — never prompt text, file contents, or secrets. See spec.md 'Orchestration Visibility Contract'.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "ts",
+    "backend",
+    "subcommand",
+    "write",
+    "exit_code",
+    "duration_ms",
+    "session_id",
+    "counts"
+  ],
+  "properties": {
+    "ts": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC timestamp when the delegation was recorded (ISO 8601, e.g. 2026-06-03T06:00:00Z)."
+    },
+    "backend": {
+      "type": "string",
+      "enum": ["codex", "cursor"],
+      "description": "Which non-Claude backend was delegated to. Claude-side work is not written here; it is derived from agent-trace.jsonl at scorecard time."
+    },
+    "subcommand": {
+      "type": "string",
+      "description": "The companion subcommand (task, review, adversarial-review, setup, status, result, cancel)."
+    },
+    "write": {
+      "type": "boolean",
+      "description": "Whether the delegation had write intent (e.g. task --write). Read-only delegations are false."
+    },
+    "exit_code": {
+      "type": ["integer", "null"],
+      "description": "Process exit code of the delegation. Null when the companion exec()s into the backend and cannot post-process (codex path)."
+    },
+    "duration_ms": {
+      "type": ["integer", "null"],
+      "description": "Wall-clock duration in milliseconds. Null when not capturable (codex exec path)."
+    },
+    "session_id": {
+      "type": "string",
+      "description": "Session that issued the delegation (CLAUDE_SESSION_ID, else session.json, else 'unknown'). Used to scope the scorecard to the current session."
+    },
+    "counts": {
+      "type": "boolean",
+      "description": "True only for real delegations (task / review / adversarial-review). False for status / setup / result / cancel so polling does not inflate the score."
+    }
+  }
+}

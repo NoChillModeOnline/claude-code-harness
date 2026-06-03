@@ -134,6 +134,19 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODEL_ROUTER="${HARNESS_CURSOR_COMPANION_MODEL_ROUTER:-${SCRIPT_DIR}/model-routing.sh}"
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || (cd "${SCRIPT_DIR}/.." && pwd))"
 
+# Orchestration ledger (Phase 90): record each delegation for the scorecard.
+# cursor-agent runs as a child here, so exit_code/duration are recorded for real.
+if [ -f "${SCRIPT_DIR}/lib/orchestration-ledger.sh" ]; then
+  # shellcheck source=scripts/lib/orchestration-ledger.sh
+  . "${SCRIPT_DIR}/lib/orchestration-ledger.sh" 2>/dev/null || true
+fi
+if ! command -v orch_emit_ledger >/dev/null 2>&1; then
+  orch_emit_ledger() { return 0; }
+fi
+if ! command -v __orch_now_ms >/dev/null 2>&1; then
+  __orch_now_ms() { printf '0'; }
+fi
+
 # ---- cursor-agent バイナリ解決 -------------------------------------------
 # command -v を優先（テストの PATH モックがここで拾われる）。
 # 見つからなければ $HOME/.local/bin/cursor-agent にフォールバックする。
@@ -333,10 +346,17 @@ cleanup() {
 }
 trap cleanup EXIT
 
+__orch_start_ms="$(__orch_now_ms 2>/dev/null || echo 0)"
 set +e
 "${cmd[@]}" >"${OUT_FILE}" 2>"${ERR_FILE}"
 rc=$?
 set -e
+
+# Record this delegation (cursor only has the `task` subcommand, always a real
+# delegation -> counts=true). exit_code/duration are captured for real here.
+__orch_dur_ms=$(( $(__orch_now_ms 2>/dev/null || echo 0) - __orch_start_ms ))
+[ "${__orch_dur_ms}" -ge 0 ] 2>/dev/null || __orch_dur_ms=0
+orch_emit_ledger "cursor" "task" "${WRITE}" "${rc}" "${__orch_dur_ms}" || true
 
 # (1) exit code を最優先で確認。cursor-agent はエラー時 stdout に JSON を出さない。
 if [ "${rc}" -ne 0 ]; then
