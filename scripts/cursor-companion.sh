@@ -143,6 +143,14 @@ fi
 if ! command -v orch_emit_ledger >/dev/null 2>&1; then
   orch_emit_ledger() { return 0; }
 fi
+# Cross-agent handoff relay (Phase 93.4): opt-in, redaction structural, no-op fallback.
+if [ -f "${SCRIPT_DIR}/lib/relay-notify.sh" ]; then
+  # shellcheck source=scripts/lib/relay-notify.sh
+  . "${SCRIPT_DIR}/lib/relay-notify.sh" 2>/dev/null || true
+fi
+if ! command -v relay_notify >/dev/null 2>&1; then
+  relay_notify() { return 0; }
+fi
 if ! command -v __orch_now_ms >/dev/null 2>&1; then
   __orch_now_ms() { printf '0'; }
 fi
@@ -357,6 +365,8 @@ set -e
 __orch_dur_ms=$(( $(__orch_now_ms 2>/dev/null || echo 0) - __orch_start_ms ))
 [ "${__orch_dur_ms}" -ge 0 ] 2>/dev/null || __orch_dur_ms=0
 orch_emit_ledger "cursor" "task" "${WRITE}" "${rc}" "${__orch_dur_ms}" || true
+# opt-in: notify a peer CC session of this cross-agent handoff (redacted).
+relay_notify "cursor" "task" "${WRITE}" || true
 
 # (1) exit code を最優先で確認。cursor-agent はエラー時 stdout に JSON を出さない。
 if [ "${rc}" -ne 0 ]; then
