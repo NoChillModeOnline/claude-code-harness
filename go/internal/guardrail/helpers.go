@@ -63,7 +63,7 @@ var protectedPathRules = []protectedPathRule{
 	// warn: policy/memory/setup metadata that is important but not hard-denied
 	{protectedPathWarn, "Claude rule or memory path", regexp.MustCompile(`(?:^|/)\.claude/(?:rules|memory)(?:/|$)`)},
 	{protectedPathWarn, "setup metadata", regexp.MustCompile(`(?:^|/)\.claude/(?:settings(?:\.local)?\.json|config(?:/|$)|Plans\.md$)`)},
-	{protectedPathWarn, "setup metadata", regexp.MustCompile(`(?:^|/)\.claude-plugin/plugin\.json$`)},
+	{protectedPathWarn, "setup metadata", regexp.MustCompile(`(?:^|/)\.claude-plugin/(?:plugin|settings(?:\.local)?)\.json$`)},
 	{protectedPathWarn, "setup metadata", regexp.MustCompile(`(?:^|/)(?:CLAUDE|AGENTS)\.md$`)},
 	{protectedPathWarn, "setup metadata", regexp.MustCompile(`(?:^|/)\.mcp\.json$`)},
 	{protectedPathWarn, "setup metadata", regexp.MustCompile(`(?:^|/)harness\.toml$`)},

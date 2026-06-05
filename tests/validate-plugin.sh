@@ -586,6 +586,40 @@ for rule_id in "${RULE_IDS[@]}"; do
     fi
 done
 
+# settings 自己書換保護: CLAUDE.md Permission Boundaries (L113) が約束する deny が、
+# 配布物 .claude-plugin/settings.json に実在するかを検証する。
+# 個人の ~/.claude/settings.json だけに deny があり配布物に無いと、
+# install したユーザーは保護されず、doc が嘘になる (doc/配布物 drift)。
+PLUGIN_SETTINGS_FILE="$PLUGIN_ROOT/.claude-plugin/settings.json"
+SELF_PROTECT_DENY_PATTERNS=(
+    "Edit(.claude/settings*)"
+    "Write(.claude/settings*)"
+    "Edit(.claude-plugin/settings*)"
+    "Write(.claude-plugin/settings*)"
+)
+if [ -f "$PLUGIN_SETTINGS_FILE" ]; then
+    missing_self_protect=""
+    for self_protect_pat in "${SELF_PROTECT_DENY_PATTERNS[@]}"; do
+        if ! python3 - "$PLUGIN_SETTINGS_FILE" "$self_protect_pat" <<'PY' >/dev/null 2>&1
+import json, sys
+path, needle = sys.argv[1], sys.argv[2]
+with open(path, encoding="utf-8") as fh:
+    deny = json.load(fh).get("permissions", {}).get("deny", [])
+sys.exit(0 if needle in deny else 1)
+PY
+        then
+            missing_self_protect="${missing_self_protect} ${self_protect_pat}"
+        fi
+    done
+    if [ -z "$missing_self_protect" ]; then
+        pass_test "settings 自己書換保護: .claude-plugin/settings.json の deny に 4 パターン全てがあります (CLAUDE.md Permission Boundaries と一致)"
+    else
+        fail_test "settings 自己書換保護が欠落:${missing_self_protect} — .claude-plugin/settings.json の permissions.deny に追加してください (CLAUDE.md L113 との drift)"
+    fi
+else
+    fail_test ".claude-plugin/settings.json が見つかりません (settings 自己書換保護を検証できません)"
+fi
+
 CODEX_WRAPPER="$PLUGIN_ROOT/scripts/codex/codex-exec-wrapper.sh"
 if grep -q "codex-hardening-contract.txt" "$CODEX_WRAPPER"; then
     pass_test "Codex wrapper が hardening contract テンプレートを参照しています"

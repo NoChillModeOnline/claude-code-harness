@@ -3,7 +3,7 @@
 
 [project]
 name = "claude-code-harness"
-version = "4.14.0"
+version = "4.15.0"
 description = "Claude harness - A harness for solo developers (Vibecoders) to handle full-cycle contract development."
 homepage = "https://github.com/Chachamaru127/claude-code-harness"
 repository = "https://github.com/Chachamaru127/claude-code-harness"
@@ -57,6 +57,12 @@ deny = [
   "Bash(mongod:*)",
   "Bash(mongo:*)",
   "mcp__codex__*",
+  # 自己書換防止: settings ファイルへの Write/Edit を禁止（CLAUDE.md Permission Boundaries）。
+  # harness sync が .claude-plugin/settings.json へ生成する。直接編集は不可。
+  "Edit(.claude/settings*)",
+  "Write(.claude/settings*)",
+  "Edit(.claude-plugin/settings*)",
+  "Write(.claude-plugin/settings*)",
   "Read(./.env)",
   "Read(./.env.*)",
   "Read(./secrets/**)",

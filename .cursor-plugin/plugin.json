@@ -1,6 +1,6 @@
 {
   "name": "claude-code-harness",
-  "version": "4.14.0",
+  "version": "4.15.0",
   "description": "Candidate Cursor adapter for Claude Code Harness Plan, Work, Review, and Release workflows.",
   "author": {
     "name": "Chachamaru",

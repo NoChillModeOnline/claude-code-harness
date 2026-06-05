@@ -64,6 +64,8 @@ func TestClassifyProtectedPath_ClaudeRulesMemoryAndSetupWarn(t *testing.T) {
 		".claude/settings.json",
 		".claude/settings.local.json",
 		".claude-plugin/plugin.json",
+		".claude-plugin/settings.json",
+		".claude-plugin/settings.local.json",
 		"CLAUDE.md",
 		"AGENTS.md",
 		".mcp.json",
