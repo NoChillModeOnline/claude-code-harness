@@ -6,6 +6,14 @@ Change history for claude-code-harness.
 
 ## [Unreleased]
 
+### Fixed
+
+#### 配布される codex/AGENTS.md の「Hooks 未対応」記述が事実誤りに
+
+**今まで**: `setup-codex.sh --project` はリポジトリの `codex/AGENTS.md` をユーザーのプロジェクト root に `AGENTS.md` としてコピーします。その記述に「Hooks は未対応」とありましたが、Codex CLI は現在 hooks（`PreToolUse` などで `permissionDecision:"deny"` / exit 2 による事前ブロック）に対応済みで、事実と食い違っていました。古い記述が各ユーザーのプロジェクトへ配布され続けていました。
+
+**今後**: 該当 3 箇所を現状ベースに訂正しました。「Codex は hooks 対応済み。Harness は現状 hook 未配線で、暫定ガードは `.codex/rules/`」という記述に統一。配布ファイルのため、内部の設計メモへの参照やロードマップは含めていません。
+
 ## [4.15.0] - 2026-06-05
 
 ### テーマ: settings 自己書換保護を配布物まで届ける
