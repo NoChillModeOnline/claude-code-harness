@@ -1,10 +1,12 @@
 package guardrail
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/Chachamaru127/claude-code-harness/go/internal/runtimefloor"
 	"github.com/Chachamaru127/claude-code-harness/go/internal/state"
 	"github.com/Chachamaru127/claude-code-harness/go/pkg/config"
 	"github.com/Chachamaru127/claude-code-harness/go/pkg/hookproto"
@@ -178,8 +180,32 @@ func loadWorkStateFromDB(dbPath, sessionID string) (*state.WorkState, error) {
 }
 
 // EvaluatePreTool is the PreToolUse hook entry point.
-// It builds the context and evaluates all guard rules.
+// It runs the runtime action hard floor first, then evaluates guard rules.
 func EvaluatePreTool(input hookproto.HookInput) hookproto.HookResult {
+	if input.ToolName == "Bash" {
+		if command, ok := input.ToolInput["command"].(string); ok {
+			worktreeRoot := input.CWD
+			if worktreeRoot == "" {
+				worktreeRoot = os.Getenv("HARNESS_PROJECT_ROOT")
+			}
+			if worktreeRoot == "" {
+				worktreeRoot = os.Getenv("PROJECT_ROOT")
+			}
+			if decision := runtimefloor.CheckCommand(command, runtimefloor.Context{
+				WorktreeRoot: worktreeRoot,
+			}); decision.Stopped {
+				return hookproto.HookResult{
+					Decision: hookproto.DecisionAsk,
+					Reason: fmt.Sprintf(
+						"RUNTIME_FLOOR:%s: %s",
+						decision.Category,
+						decision.Reason,
+					),
+				}
+			}
+		}
+	}
+
 	ctx := BuildContext(input)
 	return EvaluateRules(ctx)
 }
