@@ -4,6 +4,30 @@
 
 差分を集め、実装・仕様・Plans・デグレ・テストを見て、止めるべき問題だけを止める。
 
+## Target Selection
+
+`SKILL.md` の Review Target Detection（`REVIEW_TARGET_ASK` 契約）から参照される。
+bare 呼び出しで target が曖昧な場合の AskUserQuestion 選択肢 literal と推奨順をここで固定する。
+
+複数候補が同時に成立する場合（`REVIEW_TARGET_AMBIGUOUS: working_tree_and_branch_commits`）:
+
+- 未コミット変更のみ (Recommended): staged / unstaged / untracked を HEAD と比較して見る
+- 全部見る: branch base..HEAD と未コミット変更をまとめて見る
+- commit のみ: branch base..HEAD の committed work だけを見る
+
+clean tree かつ branch 差分がない場合（`REVIEW_TARGET_AMBIGUOUS: clean_tree_no_branch_commits`）:
+
+- 直近 1 commit (Recommended): HEAD~1..HEAD
+- 直近 5 commits: HEAD~5..HEAD
+- 別の範囲: ユーザー指定 ref を待つ
+
+ユーザー回答後:
+
+```text
+REVIEW_TARGET_CONFIRMED: {choice}
+REVIEW_AUTOSTART: target={resolved_target}, base_ref={resolved_base_ref}, type={mode}
+```
+
 ## Step 1: collect diff
 
 確認するもの:
