@@ -107,7 +107,7 @@ func runBasicChecks(projectRoot string) bool {
 	results := []checkResult{
 		checkVersion(),
 		checkFileExists(projectRoot, "harness.toml", false),
-		checkJSONFile(projectRoot, "hooks/hooks.json"),
+		checkHooksJSONPair(projectRoot),
 		checkJSONFile(projectRoot, ".claude-plugin/settings.json"),
 		checkJSONFile(projectRoot, ".claude-plugin/plugin.json"),
 		checkStateDB(projectRoot),
@@ -152,6 +152,33 @@ func checkFileExists(projectRoot, relPath string, warnOnly bool) checkResult {
 		return checkResult{label: label, ok: true, detail: "not found (optional)"}
 	}
 	return checkResult{label: label, ok: false, detail: fmt.Sprintf("not found: %s", fullPath)}
+}
+
+// checkHooksJSONPair validates hooks/hooks.json with the same semantics as
+// `harness sync` (syncHooksJSON): the file only exists in plugin-development
+// repos, so a missing source with no synced .claude-plugin/hooks.json
+// counterpart is "not configured" rather than a failure. A missing source
+// while the synced copy exists is still a failure (orphaned destination),
+// and an existing source must contain valid JSON.
+func checkHooksJSONPair(projectRoot string) checkResult {
+	src := filepath.Join(projectRoot, "hooks", "hooks.json")
+	dst := filepath.Join(projectRoot, ".claude-plugin", "hooks.json")
+	label := "hooks/hooks.json valid JSON"
+
+	data, err := os.ReadFile(src)
+	if err != nil {
+		if os.IsNotExist(err) {
+			if _, statErr := os.Stat(dst); statErr == nil {
+				return checkResult{label: label, ok: false, detail: fmt.Sprintf("not found: %s (orphaned synced copy at %s; restore the hooks/hooks.json SSOT)", src, dst)}
+			}
+			return checkResult{label: label, ok: true, detail: "not found (optional; plugin-development repos only)"}
+		}
+		return checkResult{label: label, ok: false, detail: fmt.Sprintf("unreadable: %s", src)}
+	}
+	if !json.Valid(data) {
+		return checkResult{label: label, ok: false, detail: fmt.Sprintf("invalid JSON: %s", src)}
+	}
+	return checkResult{label: label, ok: true, detail: src}
 }
 
 // checkJSONFile checks whether a JSON file exists and contains valid JSON.

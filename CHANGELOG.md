@@ -12,7 +12,7 @@ Change history for claude-code-harness.
 
 **今まで**: Setup hook / `harness init` でブートストラップした新規プロジェクトには `hooks/` ディレクトリが存在しないため、続く `harness sync` が「hooks.json sync: read hooks/hooks.json: no such file or directory」で exit 1 していました。plugin.json / settings.json は書き込まれるものの、sync 全体が失敗扱いになり auto-bootstrap が完走しませんでした。
 
-**今後**: `hooks/hooks.json` が存在しないプロジェクトでは hooks.json の同期をスキップし（「skipped hooks.json sync」と表示）、sync は正常終了します。一方、`.claude-plugin/hooks.json` が既に存在するのに source（`hooks/hooks.json`）が消えている場合は、SSOT 消失として従来どおりエラーで停止します（plugin 開発リポジトリでの誤削除検知を維持）。
+**今後**: `hooks/hooks.json` が存在しないプロジェクトでは hooks.json の同期をスキップし（「skipped hooks.json sync」と表示）、sync は正常終了します。一方、`.claude-plugin/hooks.json` が既に存在するのに source（`hooks/hooks.json`）が消えている場合は、SSOT 消失として従来どおりエラーで停止します（plugin 開発リポジトリでの誤削除検知を維持）。`harness doctor` の hooks/hooks.json チェックも同じ 3 状態（not-configured / valid / orphaned・invalid）に揃え、fresh プロジェクトで sync → doctor のブートストラップフローが最後まで通るようになりました。
 
 #### P35 footer が i18n.language を無視して日本語固定だった問題（#208）
 
