@@ -8,6 +8,12 @@ Change history for claude-code-harness.
 
 ### Fixed
 
+#### 配布される codex/AGENTS.md の「Hooks 未対応」記述が事実誤りに
+
+**今まで**: `setup-codex.sh --project` はリポジトリの `codex/AGENTS.md` をユーザーのプロジェクト root に `AGENTS.md` としてコピーします。その記述に「Hooks は未対応」とありましたが、Codex CLI は現在 hooks（`PreToolUse` などで `permissionDecision:"deny"` / exit 2 による事前ブロック）に対応済みで、事実と食い違っていました。古い記述が各ユーザーのプロジェクトへ配布され続けていました。
+
+**今後**: 該当 3 箇所を現状ベースに訂正しました。「Codex は hooks 対応済み。Harness は現状 hook 未配線で、暫定ガードは `.codex/rules/`」という記述に統一。配布ファイルのため、内部の設計メモへの参照やロードマップは含めていません。
+
 #### fresh プロジェクトで `harness sync` が hooks.json 欠如により失敗する問題
 
 **今まで**: Setup hook / `harness init` でブートストラップした新規プロジェクトには `hooks/` ディレクトリが存在しないため、続く `harness sync` が「hooks.json sync: read hooks/hooks.json: no such file or directory」で exit 1 していました。plugin.json / settings.json は書き込まれるものの、sync 全体が失敗扱いになり auto-bootstrap が完走しませんでした。
