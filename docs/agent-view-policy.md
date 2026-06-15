@@ -16,7 +16,7 @@ Harness はこれを **Lead (operator) が複数の Worker / Reviewer / Scaffold
 | Harness teammate spawn (Worker / Reviewer / Scaffolder) | `claude agents` ではなく Agent tool / breezing skill 経由 |
 | Codex teammate | `bash scripts/codex-companion.sh task` (raw `codex exec` も `claude agents` も使わない) |
 
-## 動作前提 (2.1.139-2.1.142)
+## 動作前提 (2.1.139-2.1.162)
 
 - `claude agents --json` で live session 一覧を JSON 出力できる (2.1.145)。tmux-resurrect、status bar、session picker 等の **diagnostic / scripting** 用途に限定する。Harness teammate spawn の代替にしない。
 - agent view は session ごとに **running / blocked on you / done** を表示する。
@@ -25,6 +25,7 @@ Harness はこれを **Lead (operator) が複数の Worker / Reviewer / Scaffold
   `--permission-mode`, `--model`, `--effort`, `--dangerously-skip-permissions` で dispatched
   background session を構成できる (2.1.142)。
 - Background session で起動した teammate は permission mode を保持する (2.1.141)。default に戻らない。
+- `claude agents --json` の各 session に `waitingFor` が付き、停止要因 (permission prompt / elicitation 等) を示す (2.1.162)。Lead は long-running 監視で `waitingFor` を読み、`cc:WIP` が 10 分超 + `waitingFor` 非空なら stuck と判定して再 spawn を検討する。**diagnostic / scripting 用途に限定**し、teammate spawn の代替にしない。
 
 ## Harness 安全運用ポリシー
 

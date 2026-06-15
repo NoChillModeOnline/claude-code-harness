@@ -5,47 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/Chachamaru127/claude-code-harness/go/internal/scaffold"
 )
-
-// harnessTomlTemplate is the default harness.toml content written by "harness init".
-// It documents every supported section with commented examples so users know what
-// they can configure without consulting external docs.
-const harnessTomlTemplate = `# Harness v4 Configuration
-# Edit this file, then run ` + "`harness sync`" + ` to generate CC plugin files.
-
-[project]
-name = ""
-version = "0.1.0"
-description = ""
-
-[agent]
-# default = "security-reviewer"
-
-[env]
-# CLAUDE_CODE_SUBPROCESS_ENV_SCRUB = "1"
-
-[safety.permissions]
-deny = [
-  "Bash(sudo:*)",
-]
-ask = [
-  "Bash(rm -r:*)",
-  "Bash(git push --force:*)",
-]
-
-# Optional R03 break-glass. TOML only; YAML does not support this list.
-# [[safety.guardrail.protectedPathAskList]]
-# path = ".env"
-# reason = "customer deploy env update"
-
-[safety.sandbox]
-failIfUnavailable = false
-
-[safety.sandbox.filesystem]
-# denyRead = [".env", "secrets/**"]
-# allowRead = [".env.example"]
-
-`
 
 // runInit implements the "harness init" subcommand.
 //
@@ -82,7 +44,7 @@ func runInit(args []string) {
 	}
 
 	// Write harness.toml template.
-	if err := os.WriteFile(tomlPath, []byte(harnessTomlTemplate), 0o644); err != nil {
+	if err := os.WriteFile(tomlPath, []byte(scaffold.HarnessTomlTemplate), 0o644); err != nil {
 		fmt.Fprintf(os.Stderr, "harness init: write %s: %v\n", tomlPath, err)
 		os.Exit(1)
 	}

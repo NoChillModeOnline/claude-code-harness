@@ -77,10 +77,19 @@ copy_runtime_helpers() {
     model-routing.sh \
     resolve-impl-backend.sh \
     set-impl-backend.sh \
-    setup-cursor.sh; do
+    setup-cursor.sh \
+    session-relay-watch.sh \
+    session-relay-send.sh; do
     if [ -f "${ROOT_DIR}/scripts/${script}" ]; then
       cp "${ROOT_DIR}/scripts/${script}" "${dst_root}/scripts/${script}"
       chmod +x "${dst_root}/scripts/${script}" 2>/dev/null || true
+    fi
+  done
+  # Relay helpers sourced by the relay scripts / companions (Phase 93).
+  mkdir -p "${dst_root}/scripts/lib"
+  for lib in relay-store.sh relay-notify.sh; do
+    if [ -f "${ROOT_DIR}/scripts/lib/${lib}" ]; then
+      cp "${ROOT_DIR}/scripts/lib/${lib}" "${dst_root}/scripts/lib/${lib}"
     fi
   done
 }

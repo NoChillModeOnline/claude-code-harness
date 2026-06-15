@@ -85,7 +85,7 @@ project/
 3. Plans.md テンプレートを生成
 4. hooks.json を配置
 5. **Go バイナリ検証**: `harness version` でバイナリが利用可能か確認（v4.0 以降 Node.js 不要）
-6. **プラグインファイル同期**: `harness sync` で `.claude-plugin/` 配下のファイルを最新に同期
+6. **プラグインファイル同期**: `harness sync` で `.claude-plugin/` 配下のファイルを最新に同期。`harness.toml` が無く sync が失敗する場合は先に `harness init` を実行する（Setup hook 導入前にブートストラップされたプロジェクトの復旧経路）
 7. **ヘルスチェック**: `harness doctor` で全チェック項目をパス。問題があれば修正案を提示
 
 ### Go バイナリ検証

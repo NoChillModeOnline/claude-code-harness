@@ -260,6 +260,81 @@ func TestSync_CopiesHooksJSON(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// hooks/hooks.json is optional: fresh projects have no hooks/ directory
+// ---------------------------------------------------------------------------
+
+// setupFreshProjectDir creates a project root with only harness.toml — the
+// shape produced by the Setup hook / `harness init` in a user project, where
+// no hooks/ directory exists.
+func setupFreshProjectDir(t *testing.T, tomlContent string) string {
+	t.Helper()
+
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "harness.toml"), []byte(tomlContent), 0o644); err != nil {
+		t.Fatalf("write harness.toml: %v", err)
+	}
+	return dir
+}
+
+func TestSyncHooksJSON_SkipsWhenSourceAndDestMissing(t *testing.T) {
+	dir := t.TempDir()
+
+	if err := syncHooksJSON(dir); err != nil {
+		t.Fatalf("syncHooksJSON should skip when hooks/hooks.json is absent, got: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(dir, ".claude-plugin", "hooks.json")); !os.IsNotExist(err) {
+		t.Errorf("skip must not create .claude-plugin/hooks.json (stat err = %v)", err)
+	}
+}
+
+func TestSyncHooksJSON_FailsWhenDestWouldBeOrphaned(t *testing.T) {
+	dir := t.TempDir()
+
+	// Destination exists but the SSOT source is gone — a plugin repo that
+	// accidentally deleted hooks/hooks.json. This must stay an error.
+	pluginDir := filepath.Join(dir, ".claude-plugin")
+	if err := os.MkdirAll(pluginDir, 0o755); err != nil {
+		t.Fatalf("mkdir .claude-plugin: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(pluginDir, "hooks.json"), []byte(`{"hooks":{}}`), 0o644); err != nil {
+		t.Fatalf("write .claude-plugin/hooks.json: %v", err)
+	}
+
+	err := syncHooksJSON(dir)
+	if err == nil {
+		t.Fatal("syncHooksJSON should fail when destination exists without its source")
+	}
+	if !strings.Contains(err.Error(), "orphaned") {
+		t.Errorf("error should explain the orphaned destination, got: %v", err)
+	}
+}
+
+func TestSync_FreshProjectWithoutHooksDir(t *testing.T) {
+	dir := setupFreshProjectDir(t, `
+[project]
+name = "fresh-project"
+`)
+
+	// runSync calls os.Exit(1) on failure, so reaching the assertions below
+	// proves the missing hooks/ directory no longer aborts the sync.
+	runSync([]string{dir})
+
+	pv := readJSON(t, filepath.Join(dir, ".claude-plugin", "plugin.json"))
+	if pv["name"] != "fresh-project" {
+		t.Errorf("plugin.json name = %v, want fresh-project", pv["name"])
+	}
+
+	if _, err := os.Stat(filepath.Join(dir, ".claude-plugin", "settings.json")); err != nil {
+		t.Errorf("settings.json should be generated: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(dir, ".claude-plugin", "hooks.json")); !os.IsNotExist(err) {
+		t.Errorf("hooks.json must not be generated for fresh projects (stat err = %v)", err)
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Telemetry must NOT appear in settings.json
 // ---------------------------------------------------------------------------
 

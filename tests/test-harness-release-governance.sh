@@ -31,6 +31,9 @@ required_terms=(
   'if $ARGUMENTS == ""'
   "タスクが不明確"
   "↑この結果は Claude が要約します"
+  "↑Claude will summarize this result"
+  "本文と同じ言語で出力"
+  "footer 契約は言語を再定義しない"
 )
 
 failures=0

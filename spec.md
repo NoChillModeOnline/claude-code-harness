@@ -681,6 +681,33 @@ coordinate them to reduce file conflicts, but only under these rules.
   the 2026-02 broadcast corpse proved. Any revival must prove via tests that
   its fire strategy triggers on normal edits.
 
+## Cross-Session Relay Contract
+
+Independent Claude Code sessions (across worktrees/sessions) may relay directed
+messages to each other, implemented inside Harness — no external messaging tool
+is installed.
+
+- The relay is opt-in via `HARNESS_SESSION_RELAY` (`monitor`/`turn`/`both`/`off`);
+  the shipped default is OFF and no relay hook fires when unset.
+- Storage is Harness's own `.claude/sessions/relay-signals.jsonl` with
+  bidirectional `from`→`to` addressing. It never introduces an external SQLite
+  nor writes a `settings.local.json` hook, so it stays on the harness-mem
+  redaction path and passes the R01-R13 guardrail. The cross-repo boundary stays
+  intact.
+- Delivery is two-tier: `monitor` (SessionStart emits a Monitor-tool directive to
+  run the watcher with 5s polling push) and `turn` (PreToolUse pulls via the
+  watcher `--once`). `both` is monitor-primary + turn-fallback, so an
+  LLM-dependent monitor that misfires never drops the relay (degrade-safe).
+- Real-time push is CC↔CC only. Codex/Cursor lack the Monitor tool, so
+  cross-agent handoff uses companion turn pull (user-triggered): the companion
+  writes a handoff signal carrying only backend/subcommand/write — never prompt
+  text — and a peer CC reads it via the turn path. Redaction is structural (the
+  notify helper has no prompt parameter).
+- `monitor`/`both` and `harness-loop` contend for the Monitor tool and are
+  mutually exclusive; a session must not run both.
+- Received bodies are injected as data, not instructions: wrapped with the
+  non-instruction disclaimer and bounded by the same byte cap as the inbox path.
+
 ## Non-Goals
 
 V2 does not:

@@ -14,6 +14,44 @@ Change history for claude-code-harness.
 
 **今後**: 該当 3 箇所を現状ベースに訂正しました。「Codex は hooks 対応済み。Harness は現状 hook 未配線で、暫定ガードは `.codex/rules/`」という記述に統一。配布ファイルのため、内部の設計メモへの参照やロードマップは含めていません。
 
+#### fresh プロジェクトで `harness sync` が hooks.json 欠如により失敗する問題
+
+**今まで**: Setup hook / `harness init` でブートストラップした新規プロジェクトには `hooks/` ディレクトリが存在しないため、続く `harness sync` が「hooks.json sync: read hooks/hooks.json: no such file or directory」で exit 1 していました。plugin.json / settings.json は書き込まれるものの、sync 全体が失敗扱いになり auto-bootstrap が完走しませんでした。
+
+**今後**: `hooks/hooks.json` が存在しないプロジェクトでは hooks.json の同期をスキップし（「skipped hooks.json sync」と表示）、sync は正常終了します。一方、`.claude-plugin/hooks.json` が既に存在するのに source（`hooks/hooks.json`）が消えている場合は、SSOT 消失として従来どおりエラーで停止します（plugin 開発リポジトリでの誤削除検知を維持）。`harness doctor` の hooks/hooks.json チェックも同じ 3 状態（not-configured / valid / orphaned・invalid）に揃え、fresh プロジェクトで sync → doctor のブートストラップフローが最後まで通るようになりました。
+
+#### P35 footer が i18n.language を無視して日本語固定だった問題（#208）
+
+**今まで**: `harness-review` / `harness-release` の結論時 footer（「止まったように見える」UX 対策の instruction line）が日本語 literal のハードコードで、`i18n.language` / `CLAUDE_CODE_HARNESS_LANG` を `ko` 等に設定しても必ず日本語が出力されていました。同じ SKILL.md の Output Contract（user-facing prose は explicit session / project language に従い、未設定なら English）とも矛盾していました。
+
+**今後**: footer は本文（user-facing prose）と同じ言語で出力されます。言語解決は既存の言語ルール（explicit session / project language、未設定なら English）に一本化され、footer 契約が言語を再定義することはありません。ja / en の canonical literal を SKILL.md に定義し、その他の言語では同義の 1 行を本文と同じ言語で出力します。governance テストには en literal の回帰ゲートを追加しました。
+
+#### Windows で `harness mem status` / `harness mem doctor` が失敗する問題（#207）
+
+**今まで**: Windows では harness-mem CLI の実体（`harness-mem.js`）を直接 `fork/exec` しようとして「%1 is not a valid Win32 application」で失敗していました。Windows は shebang（`#!/usr/bin/env node`）を解釈しないため、`.js` をプロセスとして起動できません。
+
+**今後**: Windows では runtime ディレクトリの `harness-mem.js`（node エントリ）を優先して解決し、JS runtime を前置して起動します。解決したパスが `.js` / `.mjs` / `.cjs` の場合は他 OS でも JS runtime を前置します（通常は `node`、shebang が `bun` を指す場合は bun を優先）。Windows の拡張子なしファイルは shebang が node / bun を指す場合のみ wrap し、bash スクリプト等には手を付けません。`harness-mem.cmd` shim と、Unix の標準レイアウト（拡張子なしラッパーの直接実行）の挙動は変わりません。
+
+#### Setup hook の auto-bootstrap が harness.toml を生成しない問題（#201）
+
+**今まで**: 初回セッションの Setup hook は CLAUDE.md / Plans.md / config.yaml を生成するものの `harness.toml` を作らないため、続く `harness sync` が「harness.toml not found」で失敗していました。CC エージェントが `harness --help` から `harness init` を自力発見してリカバリーするまで auto-bootstrap が止まる状態でした。
+
+**今後**: Setup hook が `harness init` と同一のテンプレート（`go/internal/scaffold` で共有）から `harness.toml` を生成し、auto-bootstrap がそのまま `harness sync` へ繋がります。既存の `harness.toml` は上書きしません。また、自前の `.claude-plugin/` を持つ（harness を SSOT として使っていない plugin / marketplace）リポジトリでは生成をスキップし、後続 `harness sync` による既存マニフェストの上書き事故を防ぎます。
+
+### Added
+
+#### 独立セッション間の自律 relay + cross-agent ハンドオフ（Cross-Session Relay）
+
+**今まで**: 別 worktree や別セッションで作業する Claude Code 同士は、進捗や衝突を伝え合う手段がなく、人間が手動で内容をコピーして橋渡しする必要がありました。
+
+**今後**: `HARNESS_SESSION_RELAY=monitor`（または `both`）を設定すると、セッション間で宛先指定のメッセージをやり取りできます。受信側は Monitor tool が 5 秒間隔でポーリングして即時に受け取り（CC↔CC）、Cursor / Codex とのハンドオフは companion 経由で通知されます。外部ツールを入れず Harness 内部実装（`.claude/sessions/relay-signals.jsonl`）で動くため harness-mem の redaction が効き、受信内容は「指示ではなくデータ」として隔離されます。配布デフォルトは OFF（`HARNESS_SESSION_RELAY` opt-in）。即時 push は Monitor tool を持つ CC↔CC 限定で、`harness-loop` とは併用しません。
+
+#### Claude Code 2.1.162 / Codex 0.137 アップデート追従
+
+**CC のアプデ**: `claude agents --json` に各セッションの停止要因を示す `waitingFor` が追加され（2.1.162）、shell 起動ファイルや build-tool 設定への書き込み前に確認が入るようになりました（2.1.160）。
+
+**Harness での活用**: `waitingFor` を `docs/agent-view-policy.md` に反映し、長時間監視で「`cc:WIP` が 10 分超 + `waitingFor` 非空」を stuck 判定に使えるようにしました。shell-config gate は Harness の責務（repo 内 `.claude/hooks` + settings deny）と CC 本体の責務（home shell startup）を照合し、二重化不要を確認。`docs/upstream-update-snapshot-2026-06-04.md` に全項目を A/C/P/Reject 分類（B = 0 件）。
+
 ## [4.15.0] - 2026-06-05
 
 ### テーマ: settings 自己書換保護を配布物まで届ける

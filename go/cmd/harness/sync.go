@@ -14,8 +14,7 @@ import (
 //
 // It reads harness.toml from the project root, then generates:
 //   - .claude-plugin/plugin.json   ← [project] section
-//   - hooks/hooks.json             ← current hooks.json template (Phase 35.3 will make this dynamic)
-//   - .claude-plugin/hooks.json    ← identical copy of hooks/hooks.json
+//   - .claude-plugin/hooks.json    ← copy of hooks/hooks.json, only when that source exists (plugin-development repos)
 //   - .claude-plugin/settings.json ← [agent] + [env] + [safety.permissions] + [safety.sandbox]
 //
 // The project root is determined by the first argument (or cwd if omitted).
@@ -162,12 +161,27 @@ func generatePluginJSON(projectRoot string, cfg *config.Config) error {
 // syncHooksJSON copies hooks/hooks.json to .claude-plugin/hooks.json.
 // Phase 35.2 uses the existing hooks.json as a static template.
 // Phase 35.3 will make hooks generation dynamic based on harness.toml [hooks].
+//
+// hooks/hooks.json only exists in plugin-development repos (this repo's own
+// layout). Fresh user projects bootstrapped by the Setup hook / `harness init`
+// have no hooks/ directory, so a missing source with no existing destination
+// means "nothing to sync" rather than an error. A missing source while
+// .claude-plugin/hooks.json exists still fails: that shape only occurs when a
+// plugin repo lost its SSOT source, and silently skipping would freeze the
+// orphaned copy.
 func syncHooksJSON(projectRoot string) error {
 	src := filepath.Join(projectRoot, "hooks", "hooks.json")
 	dst := filepath.Join(projectRoot, ".claude-plugin", "hooks.json")
 
 	data, err := os.ReadFile(src)
 	if err != nil {
+		if os.IsNotExist(err) {
+			if _, statErr := os.Stat(dst); statErr == nil {
+				return fmt.Errorf("read %s: %w (existing %s would be orphaned; restore the hooks/hooks.json SSOT)", src, err, rel(projectRoot, dst))
+			}
+			fmt.Printf("  skipped hooks.json sync (%s not found)\n", rel(projectRoot, src))
+			return nil
+		}
 		return fmt.Errorf("read %s: %w", src, err)
 	}
 

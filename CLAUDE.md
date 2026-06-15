@@ -94,7 +94,7 @@ Details: [docs/CLAUDE-commands.md](docs/CLAUDE-commands.md)
 - **VERSION sync**: Leave version files untouched in normal PRs; update them only for releases
 - **Worker 契約 (v4.3.0+)**: Worker は `worker-report.v1` で self_review 5 件必須。Plans.md の `cc:*` マーカー書換は NG-1 で自動 deny。詳細: [agents/worker.md](agents/worker.md)
 - **Skill frontmatter 設計**: `disable-model-invocation: true` は dangerous side-effect skill 専用。read-only / 判定 skill に付けると Skill tool 経由起動をブロックする副作用。Anti-Pattern: [.claude/rules/skill-editing.md](.claude/rules/skill-editing.md) + [.claude/memory/patterns.md](.claude/memory/patterns.md) P27 非適用条件 (2026-05-18 codify)
-- **Slash command 出力の要約契約**: `/コマンド` の `<local-command-stdout>` が長文 (10 行以上) で host Claude に渡された場合、host は必ず assistant message として 1-3 行で要約し、次のアクション (待機 / 終了 / ユーザー判断要請) を明示する。skill 側も結論時に instruction line literal (`↑この結果は Claude が要約します。Enter キーで次へ進むか、新規 prompt で別の指示を出してください。`) を出力する。詳細: [.claude/memory/patterns.md](.claude/memory/patterns.md) P35 (2026-05-19 codify)
+- **Slash command 出力の要約契約**: `/コマンド` の `<local-command-stdout>` が長文 (10 行以上) で host Claude に渡された場合、host は必ず assistant message として 1-3 行で要約し、次のアクション (待機 / 終了 / ユーザー判断要請) を明示する。skill 側も結論時に instruction line を本文と同じ言語で出力する (ja: `↑この結果は Claude が要約します。Enter キーで次へ進むか、新規 prompt で別の指示を出してください。` / en: `↑Claude will summarize this result. Press Enter to continue, or send a new prompt for a different instruction.` / その他言語は同義の 1 行。言語解決は Language 節のルールに従う)。詳細: [.claude/memory/patterns.md](.claude/memory/patterns.md) P35 (2026-05-19 codify、2026-06-12 i18n 対応 #208)
 
 ## MCP Trust Policy
 

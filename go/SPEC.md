@@ -160,7 +160,7 @@ CC 公式フック仕様に基づく、フィールドごとの分類。
 | harness.toml セクション | 生成先 | CC キー |
 |------------------------|--------|--------|
 | `[project]` name, version, description, author | `plugin.json` | name, version, description, author |
-| `[hooks]` | `hooks/hooks.json` + `.claude-plugin/hooks.json` | hooks |
+| `[hooks]` | `.claude-plugin/hooks.json` (`hooks/hooks.json` のコピー、source 不在時は skip。Phase 35.3 で動的生成予定) | hooks |
 | `[safety.permissions]` deny, ask | `settings.json` | permissions.deny, permissions.ask |
 | `[safety.sandbox]` | `settings.json` | sandbox |
 | `[agent]` default | `settings.json` | agent |
@@ -221,14 +221,20 @@ exit:   0 = allow/warn, 2 = deny/block
 ```
 stdin:  なし
 stdout: 生成ログ
-exit:   0 = 成功, 1 = harness.toml パースエラー or unsupported key
+exit:   0 = 成功, 1 = harness.toml パースエラー or unsupported key or generator エラー
 ```
 
 harness.toml を読み取り、以下を生成:
-- `hooks/hooks.json`
-- `.claude-plugin/hooks.json` (同一内容)
+- `.claude-plugin/hooks.json` (`hooks/hooks.json` が存在する場合のみ、そのコピー)
 - `.claude-plugin/plugin.json`
 - `.claude-plugin/settings.json`
+
+`hooks/hooks.json` は plugin 開発リポジトリにのみ存在する source。不在かつ
+`.claude-plugin/hooks.json` も無い場合 (fresh プロジェクト) は hooks.json の
+同期を skip して成功扱い。不在なのに `.claude-plugin/hooks.json` だけ残って
+いる場合は SSOT 消失 (orphan) として exit 1。`harness doctor` の
+hooks/hooks.json チェックも同じ 3 状態 (not-configured / valid / orphaned・
+invalid) で判定する。
 
 ### `harness init`
 

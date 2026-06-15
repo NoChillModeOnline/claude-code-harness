@@ -264,6 +264,14 @@ func runHook(hookType string) {
 		if err := hookhandler.HandleSessionRegister(os.Stdin, os.Stdout); err != nil {
 			fmt.Fprintf(os.Stderr, "session-register handler error: %v\n", err)
 		}
+	case "session-relay-start":
+		if err := hookhandler.HandleSessionRelayStart(os.Stdin, os.Stdout); err != nil {
+			fmt.Fprintf(os.Stderr, "session-relay-start handler error: %v\n", err)
+		}
+	case "relay-poll":
+		if err := hookhandler.HandleRelayPoll(os.Stdin, os.Stdout); err != nil {
+			fmt.Fprintf(os.Stderr, "relay-poll handler error: %v\n", err)
+		}
 	case "session-unregister":
 		if err := hookhandler.HandleSessionUnregister(os.Stdin, os.Stdout); err != nil {
 			fmt.Fprintf(os.Stderr, "session-unregister handler error: %v\n", err)

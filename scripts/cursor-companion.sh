@@ -143,6 +143,14 @@ fi
 if ! command -v orch_emit_ledger >/dev/null 2>&1; then
   orch_emit_ledger() { return 0; }
 fi
+# Cross-agent handoff relay (Phase 93.4): opt-in, redaction structural, no-op fallback.
+if [ -f "${SCRIPT_DIR}/lib/relay-notify.sh" ]; then
+  # shellcheck source=scripts/lib/relay-notify.sh
+  . "${SCRIPT_DIR}/lib/relay-notify.sh" 2>/dev/null || true
+fi
+if ! command -v relay_notify >/dev/null 2>&1; then
+  relay_notify() { return 0; }
+fi
 if ! command -v __orch_now_ms >/dev/null 2>&1; then
   __orch_now_ms() { printf '0'; }
 fi
@@ -346,6 +354,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# opt-in: notify a peer CC session of this cross-agent handoff BEFORE the blocking
+# cursor-agent run, so the peer can observe the handoff while the task is active.
+relay_notify "cursor" "task" "${WRITE}" || true
 __orch_start_ms="$(__orch_now_ms 2>/dev/null || echo 0)"
 set +e
 "${cmd[@]}" >"${OUT_FILE}" 2>"${ERR_FILE}"

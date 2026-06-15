@@ -441,6 +441,74 @@ func TestDoctor_CheckJSONFile(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// TestDoctor_CheckHooksJSONPair — tri-state per active-watching-test-policy:
+// not-configured (fresh project) must pass, orphaned/corrupted must fail.
+// ---------------------------------------------------------------------------
+
+func TestDoctor_CheckHooksJSONPair_NotConfigured(t *testing.T) {
+	dir := t.TempDir()
+
+	r := checkHooksJSONPair(dir)
+	if !r.ok {
+		t.Errorf("expected ok=true for fresh project without hooks/ (detail: %s)", r.detail)
+	}
+	if !strings.Contains(r.detail, "optional") {
+		t.Errorf("expected 'optional' in detail, got %q", r.detail)
+	}
+}
+
+func TestDoctor_CheckHooksJSONPair_Healthy(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "hooks"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "hooks", "hooks.json"), []byte(`{"hooks":{}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := checkHooksJSONPair(dir)
+	if !r.ok {
+		t.Errorf("expected ok=true for valid hooks/hooks.json, got false (detail: %s)", r.detail)
+	}
+}
+
+func TestDoctor_CheckHooksJSONPair_Corrupted(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "hooks"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "hooks", "hooks.json"), []byte("{bad json"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := checkHooksJSONPair(dir)
+	if r.ok {
+		t.Error("expected ok=false for invalid JSON in hooks/hooks.json")
+	}
+	if !strings.Contains(r.detail, "invalid JSON") {
+		t.Errorf("expected 'invalid JSON' in detail, got %q", r.detail)
+	}
+}
+
+func TestDoctor_CheckHooksJSONPair_OrphanedDest(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, ".claude-plugin"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".claude-plugin", "hooks.json"), []byte(`{"hooks":{}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := checkHooksJSONPair(dir)
+	if r.ok {
+		t.Error("expected ok=false when synced copy exists without its hooks/hooks.json source")
+	}
+	if !strings.Contains(r.detail, "orphaned") {
+		t.Errorf("expected 'orphaned' in detail, got %q", r.detail)
+	}
+}
+
+// ---------------------------------------------------------------------------
 // TestDoctor_CheckStateDB
 // ---------------------------------------------------------------------------
 

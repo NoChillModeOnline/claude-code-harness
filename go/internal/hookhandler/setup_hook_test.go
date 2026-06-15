@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Chachamaru127/claude-code-harness/go/internal/scaffold"
 )
 
 func TestMain(m *testing.M) {
@@ -43,6 +45,15 @@ func assertSetupOutput(t *testing.T, output, wantSubstr string) {
 }
 
 func TestHandleSetupHookInit_EmptyInput(t *testing.T) {
+	// runSetupInit は CWD にファイルを生成するため、パッケージディレクトリを
+	// 汚さないよう一時ディレクトリへ移動して実行する。
+	dir := t.TempDir()
+	origWD, _ := os.Getwd()
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(origWD)
+
 	var out bytes.Buffer
 	err := HandleSetupHookInit(strings.NewReader(""), &out)
 	if err != nil {
@@ -90,7 +101,9 @@ func TestHandleSetupHookInit_CreatesStateDir(t *testing.T) {
 	}
 }
 
-func TestHandleSetupHookInit_AlreadyInitialized(t *testing.T) {
+// TestHandleSetupHookInit_CreatesHarnessToml は Setup hook の init が
+// `harness sync` の入力となる harness.toml を生成することを確認する (#201)。
+func TestHandleSetupHookInit_CreatesHarnessToml(t *testing.T) {
 	dir := t.TempDir()
 	origWD, _ := os.Getwd()
 	if err := os.Chdir(dir); err != nil {
@@ -98,8 +111,33 @@ func TestHandleSetupHookInit_AlreadyInitialized(t *testing.T) {
 	}
 	defer os.Chdir(origWD)
 
-	// 事前に状態ディレクトリを作成
-	if err := os.MkdirAll(filepath.Join(dir, ".claude", "state"), 0o755); err != nil {
+	var out bytes.Buffer
+	if err := HandleSetupHookInit(strings.NewReader(""), &out); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, "harness.toml"))
+	if err != nil {
+		t.Fatalf("harness.toml was not created: %v", err)
+	}
+	if string(data) != scaffold.HarnessTomlTemplate {
+		t.Errorf("harness.toml content does not match scaffold.HarnessTomlTemplate")
+	}
+	assertSetupOutput(t, out.String(), "harness.toml 生成完了")
+}
+
+// TestHandleSetupHookInit_PreservesExistingHarnessToml は既存の harness.toml を
+// 上書きしないことを確認する。
+func TestHandleSetupHookInit_PreservesExistingHarnessToml(t *testing.T) {
+	dir := t.TempDir()
+	origWD, _ := os.Getwd()
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(origWD)
+
+	existing := "[project]\nname = \"user-edited\"\n"
+	if err := os.WriteFile(filepath.Join(dir, "harness.toml"), []byte(existing), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -108,7 +146,94 @@ func TestHandleSetupHookInit_AlreadyInitialized(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	assertSetupOutput(t, out.String(), "[Setup:init]")
+	data, err := os.ReadFile(filepath.Join(dir, "harness.toml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != existing {
+		t.Errorf("existing harness.toml was overwritten:\ngot:  %q\nwant: %q", data, existing)
+	}
+	if strings.Contains(out.String(), "harness.toml 生成完了") {
+		t.Errorf("output should not report harness.toml creation when it already exists: %s", out.String())
+	}
+}
+
+func TestHandleSetupHookInit_AlreadyInitialized(t *testing.T) {
+	dir := t.TempDir()
+	origWD, _ := os.Getwd()
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(origWD)
+
+	// script dir が実在の harness install を指すと step 1 がメッセージを
+	// 追加してしまうため、空文字で固定する (空は未設定扱い)
+	t.Setenv("CLAUDE_PLUGIN_ROOT", "")
+	t.Setenv("HARNESS_SCRIPT_DIR", "")
+
+	// 事前に状態ディレクトリと harness.toml を作成し、
+	// 生成ステップが全てスキップされる「初期化済み」分岐を踏ませる
+	if err := os.MkdirAll(filepath.Join(dir, ".claude", "state"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "harness.toml"), []byte("[project]\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var out bytes.Buffer
+	if err := HandleSetupHookInit(strings.NewReader(""), &out); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	assertSetupOutput(t, out.String(), "ハーネスは既に初期化済みです")
+}
+
+// TestHandleSetupHookInit_SkipsHarnessTomlForForeignPluginRepo は、自前の
+// .claude-plugin/ を持つ (harness 非 opt-in の) リポジトリでは harness.toml を
+// 生成しないことを確認する。生成すると後続の `harness sync` がテンプレート由来の
+// plugin.json / settings.json を上書き・混入させてしまうため (#201 レビュー指摘)。
+func TestHandleSetupHookInit_SkipsHarnessTomlForForeignPluginRepo(t *testing.T) {
+	tests := []struct {
+		name string
+		file string // .claude-plugin/ 配下に置くファイル。空ならディレクトリのみ
+	}{
+		{"plugin.json", `plugin.json`},
+		{"settings.json", `settings.json`},
+		{"marketplace.json", `marketplace.json`},
+		{"empty dir", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			origWD, _ := os.Getwd()
+			if err := os.Chdir(dir); err != nil {
+				t.Fatal(err)
+			}
+			defer os.Chdir(origWD)
+
+			if err := os.MkdirAll(filepath.Join(dir, ".claude-plugin"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if tt.file != "" {
+				if err := os.WriteFile(filepath.Join(dir, ".claude-plugin", tt.file), []byte(`{"name":"my-own-plugin"}`), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			var out bytes.Buffer
+			if err := HandleSetupHookInit(strings.NewReader(""), &out); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if _, err := os.Stat(filepath.Join(dir, "harness.toml")); err == nil {
+				t.Error("harness.toml must not be generated in a repo with its own .claude-plugin/")
+			}
+			if strings.Contains(out.String(), "harness.toml 生成完了") {
+				t.Errorf("output should not report harness.toml creation: %s", out.String())
+			}
+		})
+	}
 }
 
 func TestHandleSetupHookInit_HarnessMemAutoSetupDisabledSilentSkip(t *testing.T) {

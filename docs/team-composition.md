@@ -125,6 +125,28 @@ bash scripts/codex-companion.sh review --base "${TASK_BASE_REF}"
 
 raw `codex exec` をチーム標準手順として書かない。
 
+## Cross-session relay (HARNESS_SESSION_RELAY)
+
+独立セッション (worktree/session 跨ぎ) 間の relay。opt-in env `HARNESS_SESSION_RELAY` で配布 default OFF。storage は CCH 自身の `.claude/sessions/relay-signals.jsonl` (双方向 from→to addressing) で harness-mem redaction に乗る。外部ツール (agmsg) を install せず内部実装。
+
+| mode | 配達 | 用途 |
+|------|------|------|
+| `monitor` | SessionStart が Monitor tool に `session-relay-watch.sh` を常駐起動させ 5 秒ポーリングで push | CC↔CC 即時通知 |
+| `turn` | PreToolUse (`relay-poll`) が毎ツールで新着を pull | 確実だが tool 実行ごと |
+| `both` | monitor 主 + turn fallback | monitor が LLM 依存で滑っても relay が死なない degrade-safe |
+| `off` / unset | 無効 | default |
+
+### harness-loop との二者択一
+
+`monitor`/`both` と `harness-loop` は **Monitor tool を取り合う**ため同時併用しない。relay monitor を使う session では harness-loop を起動しない。逆も同じ。
+
+### 限界
+
+- **即時 push は CC↔CC 限定**。Codex/Cursor は Monitor tool を持たないため即時 push 不可。cross-agent は companion turn pull (ユーザートリガーのハンドオフ) で配達する
+- **5 秒遅延**: monitor は `HARNESS_SESSION_RELAY_INTERVAL` (default 5) 秒ポーリング。完全即時ではない
+- **両セッション起動必須**: 送受信の両 session が起動・待機中である必要がある。完全停止 session への cold wake は不可
+- 受信 body は untrusted-data として隔離 (構造化フィールド + disclaimer、上限 4096B)。embedded 指示を盲目実行しない
+
 ## 2.1.111 優先ルール
 
 - `xhigh` は caller 側の推論強度指定。worker prompt が文字列から自動判定しない

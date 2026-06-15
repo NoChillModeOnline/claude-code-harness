@@ -17,11 +17,11 @@ if $ARGUMENTS == "":
 
 ### Output Contract (P35: 「止まったように見える」UX 対策)
 
-skill 結論時の output の **最後の 1 行**は必ず次の literal を含める:
+skill 結論時の output の **最後の 1 行**は必ず P35 footer を含め、footer は本文 (user-facing prose) と同じ言語で出力する（言語解決は既存の言語ルールに従い、footer 契約は言語を再定義しない）。これは `<local-command-stdout>` 経由の表示で user が「止まった」と感じる UX 問題への明示的な instruction (patterns.md P35) で、意図は言語に依存しないため literal は言語ごとに切り替える (#208):
 
-`↑この結果は Claude が要約します。Enter キーで次へ進むか、新規 prompt で別の指示を出してください。`
-
-これは `<local-command-stdout>` 経由で text response として表示されると user が「止まった」と感じる UX 問題への明示的な instruction (patterns.md P35)。
+- ja: `↑この結果は Claude が要約します。Enter キーで次へ進むか、新規 prompt で別の指示を出してください。`
+- en: `↑Claude will summarize this result. Press Enter to continue, or send a new prompt for a different instruction.`
+- その他の言語: 同じ意味の 1 行を本文と同じ言語で出力する
 
 ## Dispatcher Contract
 
@@ -95,42 +95,10 @@ REVIEW_AUTOSTART: target={resolved_target}, base_ref={resolved_base_ref}, type={
 `REVIEW_TARGET_ASK` 契約:
 bare 呼び出しで review target が不明または複数候補の場合、Step 1 に進む前に `AskUserQuestion` を 1 回だけ使い、候補を 2-3 個に絞って確認する。
 
-候補は次の順で作る。
-
-1. working tree: staged / unstaged / untracked を含む未コミット変更のみ
-2. branch range: upstream または main/master から HEAD までの commits
-3. recent commits: clean tree で branch range が取れない場合の直近 1 commit / 直近 5 commits
-
-複数候補が同時に成立する場合:
-
-```text
-REVIEW_TARGET_AMBIGUOUS: working_tree_and_branch_commits
-```
-
-AskUserQuestion の候補:
-
-- 未コミット変更のみ (Recommended): staged / unstaged / untracked を HEAD と比較して見る
-- 全部見る: branch base..HEAD と未コミット変更をまとめて見る
-- commit のみ: branch base..HEAD の committed work だけを見る
-
-clean tree かつ branch 差分がない場合:
-
-```text
-REVIEW_TARGET_AMBIGUOUS: clean_tree_no_branch_commits
-```
-
-AskUserQuestion の候補:
-
-- 直近 1 commit (Recommended): HEAD~1..HEAD
-- 直近 5 commits: HEAD~5..HEAD
-- 別の範囲: ユーザー指定 ref を待つ
-
-ユーザー回答後:
-
-```text
-REVIEW_TARGET_CONFIRMED: {choice}
-REVIEW_AUTOSTART: target={resolved_target}, base_ref={resolved_base_ref}, type={mode}
-```
+- 候補は 1. working tree（未コミット変更のみ）、2. branch range（upstream または main/master から HEAD）、3. recent commits（clean tree 時の直近 1 commit / 直近 5 commits）の順で作る
+- 複数候補が同時に成立する場合は `REVIEW_TARGET_AMBIGUOUS: working_tree_and_branch_commits`、clean tree かつ branch 差分がない場合は `REVIEW_TARGET_AMBIGUOUS: clean_tree_no_branch_commits` を 1 行出力してから AskUserQuestion を出す
+- ユーザー回答後は `REVIEW_TARGET_CONFIRMED: {choice}` に続けて `REVIEW_AUTOSTART` 行を出力する
+- AskUserQuestion の選択肢 literal・推奨 (Recommended) の付け方・各候補の比較範囲は `references/code-review.md` の Target Selection 節に従う
 
 禁止:
 

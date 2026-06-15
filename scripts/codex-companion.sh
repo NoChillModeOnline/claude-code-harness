@@ -37,6 +37,17 @@ if ! command -v orch_emit_ledger >/dev/null 2>&1; then
   orch_emit_ledger() { return 0; }
 fi
 
+# Cross-agent handoff relay (Phase 93.4): opt-in notification of this delegation
+# to a peer CC session via the relay store. Default OFF; redaction is structural
+# (relay_notify has no prompt param). No-op fallback keeps old installs working.
+if [ -f "${SCRIPT_DIR}/lib/relay-notify.sh" ]; then
+  # shellcheck source=scripts/lib/relay-notify.sh
+  . "${SCRIPT_DIR}/lib/relay-notify.sh" 2>/dev/null || true
+fi
+if ! command -v relay_notify >/dev/null 2>&1; then
+  relay_notify() { return 0; }
+fi
+
 is_valid_codex_effort() {
   case "${1:-}" in
     none|minimal|low|medium|high|xhigh) return 0 ;;
@@ -279,6 +290,8 @@ if [ -n "${SUBCOMMAND}" ]; then
   __orch_codex_write=0
   if task_has_write_intent "$@"; then __orch_codex_write=1; fi
   orch_emit_ledger "codex" "${SUBCOMMAND}" "${__orch_codex_write}" "" "" || true
+  # opt-in: notify a peer CC session of this cross-agent handoff (redacted).
+  relay_notify "codex" "${SUBCOMMAND}" "${__orch_codex_write}" || true
 fi
 if should_use_structured_task_exec "$@"; then
   STRUCTURED_TASK_EXEC=1

@@ -141,6 +141,9 @@ join_messages() {
 }
 
 # ===== Init モード: 初回セットアップ =====
+# NOTE: 本番の Setup hook は Go 実装 (go/internal/hookhandler/setup_hook.go の
+# runSetupInit) が担う。harness.toml の生成 (#201) は Go 実装のみが行い、
+# 本スクリプトは言語レンダリング等の reference 実装として保守される。
 run_init() {
   local messages=()
   local locale
