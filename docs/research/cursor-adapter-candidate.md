@@ -1,30 +1,59 @@
 # Cursor Adapter Candidate
 
-Status: candidate evidence boundary
-Checked at: 2026-05-28 JST
-Phase: `Plans.md` 81.1
+Status: internal-compatible evidence boundary
+Checked at: 2026-05-29 JST
+Phase: `Plans.md` 87 (promoted from Phase 81 candidate skeleton)
 
 ## Conclusion
 
-Cursor remains `candidate`.
+Cursor is **`internal-compatible`** — the current support tier (same rung as Codex
+CLI and OpenCode), promoted from `candidate` in Phase 87 / PR #174.
 
-Harness now has a Cursor adapter skeleton (`.cursor-plugin/`, `.cursor/AGENTS.md`,
-`.cursor/agents/`, hooks/MCP config shape) and static smoke tests, but it does not
-have verified workflow smoke that proves Plan → Work → Review from Cursor alone.
-The existing `docs/CURSOR_INTEGRATION.md` PM handoff path is separate from adapter
-support.
+Harness has a Cursor adapter route (`.cursor-plugin/`, `.cursor/AGENTS.md`,
+`.cursor/agents/`, host-specific dist build, `scripts/setup-cursor.sh`, hooks/MCP
+config shape, static smoke tests) and **observed Desktop skill loading**
+(`/breezing`, workflow skills). It does not yet have CI-gated workflow smoke that
+proves full Plan → Work → Review from Cursor alone, nor runtime guard / hook /
+Cloud Agent parity. The existing `docs/CURSOR_INTEGRATION.md` PM handoff path is
+separate from adapter support.
 
 ## Evidence Boundary
 
-`not_observed != absent`: missing Cursor runtime smoke is not proof that Cursor
-cannot support Harness. It is proof that Harness must not claim support yet.
+`not_observed != absent`: missing CI-gated Cursor workflow smoke is not proof that
+Cursor cannot run Harness workflows. It is proof that Harness must not claim the
+public support tier yet.
 
-Do not promote Cursor beyond the `candidate` tier until:
+Do not promote Cursor beyond `internal-compatible` to the public support tier
+until:
 
 - host-specific bootstrap smoke passes,
 - release preflight consumes the adapter route,
 - README/onboarding wording still separates handoff integration from adapter
   support.
+
+## Observed Runtime Evidence (2026-05-29)
+
+Manual Desktop observation (operator-local, not CI-gated):
+
+| Observation | Evidence | Limit |
+|---|---|---|
+| Local plugin load after real-directory install | Cursor Plugins log no longer shows `loadUserLocalPlugin ... rejected: symlink target ... is outside ...` | Symlink installs are rejected by Cursor |
+| Skill menu visibility | Operator confirmed `/breezing` and other workflow skills appear after Reload Window | Single-session manual proof only |
+| Frontmatter normalization | `scripts/build-host-plugin-dist.sh` rewrites `user-invocable: true` → `false` for Cursor package | Claude Code slash contract preserved in Claude dist |
+
+Pre-fix failures that informed the distribution phase:
+
+- Symlink install at `~/.cursor/plugins/local/claude-code-harness` → **rejected**
+  (target outside `~/.cursor/plugins/local`)
+- Raw repo skills with `user-invocable: true` → **dropped** by Cursor (skills
+  invisible in `/` menu)
+
+Fix applied:
+
+```bash
+bash scripts/setup-cursor.sh --check   # build + validate only
+bash scripts/setup-cursor.sh           # real copy to ~/.cursor/plugins/local/
+```
 
 ## Harness Evidence (This Repository)
 
@@ -80,12 +109,12 @@ Not observed in this repo's smoke (2026-05-28):
 
 ## Separation: PM Handoff vs Adapter Support
 
-| Concern | PM handoff (`CURSOR_INTEGRATION.md`) | Adapter candidate (this doc) |
+| Concern | PM handoff (`CURSOR_INTEGRATION.md`) | Adapter evidence (this doc) |
 |---|---|---|
 | Primary user | Cursor plans/reviews, Claude implements | Operator stays in Cursor for Plan → Work → Review |
 | Bootstrap | Shared `Plans.md` + Cursor command templates | `.cursor-plugin/` + `.cursor/AGENTS.md` + skills/agents |
 | Parallelism | Out of scope | Maps to subagents / background agents / multitask (smoke target) |
-| Support claim | Never implies Cursor adapter support | Remains `candidate` until smoke + preflight pass |
+| Support claim | Never implies Cursor adapter support | `internal-compatible`; public support tier gated on smoke + preflight |
 | Verification | Branch + marker sanity | `bash tests/test-cursor-adapter-candidate.sh` |
 
 ## cursor-agent CLI fact-check (local, no network)
@@ -124,8 +153,8 @@ Keeping `not_observed != absent` discipline: the absence of an observed
 chat-completions API is an unfalsifiable negative and is **not** relied upon as
 proof. No claim here asserts "no chat-completions API" as proven.
 
-This fact-check inspects the local CLI only. It does **not** promote Cursor
-beyond the `candidate` tier and adds no support claim; the candidate boundary in
+This fact-check inspects the local CLI only. It does **not** change Cursor's
+support tier or add a public support claim; the `internal-compatible` boundary in
 the Conclusion and Evidence Boundary sections is unchanged.
 
 ## cursor-agent CLI network smoke (verified 2026-05-29)
@@ -135,7 +164,7 @@ with `--mode ask` (read-only), no `--force`/`--yolo`, and cursor-agent's own
 `--sandbox enabled`. The Claude Code Bash sandbox was disabled for this run
 because cursor-agent reaches Cursor cloud hosts outside the sandbox allowlist
 (under the sandbox the call hangs on blocked egress — confirming the network
-dependency). This run did not change the support tier; Cursor stays `candidate`.
+dependency). This run did not change the support tier; Cursor stays `internal-compatible`.
 
 | Observation | Result |
 | --- | --- |
@@ -273,7 +302,7 @@ hot-reloaded:
 ## Cursor ACP — Not adopted (2026-05-29)
 
 Cursor's Agent Client Protocol (ACP) is recorded here as NOT ADOPTED for the
-harness execution backend; Cursor stays `candidate` and no support tier changes.
+harness execution backend; Cursor stays `internal-compatible` and no support tier changes.
 
 ### What ACP is
 
@@ -310,13 +339,13 @@ harness execution backend; Cursor stays `candidate` and no support tier changes.
 - Per-action permission gating (rather than per-session) becomes a harness
   contract.
 
-Support tier is unchanged (cursor=`candidate`); no consumer distribution claim
-is added by this entry.
+Support tier is unchanged (cursor=`internal-compatible`); no consumer
+distribution claim is added by this entry.
 
 ## Promotion Conditions
 
-Cursor can move beyond `candidate` only after all of the following in the same
-claim path:
+Cursor can move beyond `internal-compatible` to the public support tier only
+after all of the following in the same claim path:
 
 1. Current official docs captured with extractable evidence (this doc + tests).
 2. Harness-specific Cursor bootstrap route consumed by setup or release preflight.
@@ -324,9 +353,9 @@ claim path:
    `harness-review` routing from Cursor with transcript or CI artifact.
 4. Breezing Cursor mapping recorded as smoke target, not as public parity claim.
 5. `tests/test-support-claim-wording.sh` still passes (no public Cursor tier
-   claim beyond `candidate`).
+   claim beyond `internal-compatible`).
 6. Optional Cloud Agent API smoke recorded separately; failure does not block
-   local Desktop/CLI candidate evidence if tier wording stays honest.
+   local Desktop/CLI internal-compatible evidence if tier wording stays honest.
 
 Residual risks after Phase 81:
 

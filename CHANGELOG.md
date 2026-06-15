@@ -8,6 +8,8 @@ Change history for claude-code-harness.
 
 ### Fixed
 
+- Cursor アダプタ evidence ドキュメント（`docs/research/cursor-adapter-candidate.md`）の tier 表記を `internal-compatible` に復元。PR #174 の昇格マージで evidence ファイル分の hunk が脱落し、`release-preflight.sh` の cursor adapter candidate smoke が FAIL していたのを修正（README / onboarding / テストは既に `internal-compatible` で整合済みだった）。
+
 #### 配布される codex/AGENTS.md の「Hooks 未対応」記述が事実誤りに
 
 **今まで**: `setup-codex.sh --project` はリポジトリの `codex/AGENTS.md` をユーザーのプロジェクト root に `AGENTS.md` としてコピーします。その記述に「Hooks は未対応」とありましたが、Codex CLI は現在 hooks（`PreToolUse` などで `permissionDecision:"deny"` / exit 2 による事前ブロック）に対応済みで、事実と食い違っていました。古い記述が各ユーザーのプロジェクトへ配布され続けていました。
