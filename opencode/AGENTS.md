@@ -42,6 +42,8 @@ language is configured, use English. Use Japanese only when `i18n.language: ja`,
 `CLAUDE_CODE_HARNESS_LANG=ja`, or an explicit session instruction requests
 Japanese output.
 
+Full details (how to switch, precedence, what does not change): [docs/i18n.md](docs/i18n.md).
+
 ### Code Style
 
 - Use clear and descriptive names
