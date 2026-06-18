@@ -1,7 +1,7 @@
 ---
 name: harness-orchestration
-description: "Show how much this session/project orchestrated across backends (Claude / Codex / Cursor). Renders an on-demand HTML scorecard + terminal summary from the orchestration ledger and lifetime totals. Use when the user asks to see orchestration usage, a backend scorecard, which backend was used, how much Codex/Cursor was used, lifetime totals, or wants something to show off (自慢). Do NOT load for: implementing tasks, reviews, planning, or release."
-description-en: "Show how much this session/project orchestrated across backends (Claude / Codex / Cursor). Renders an on-demand HTML scorecard + terminal summary from the orchestration ledger and lifetime totals. Use when the user asks to see orchestration usage, a backend scorecard, which backend was used, how much Codex/Cursor was used, lifetime totals, or wants something to show off (自慢). Do NOT load for: implementing tasks, reviews, planning, or release."
+description: "Backend orchestration scorecard (Claude/Codex/Cursor) — HTML + terminal summary. Triggers: scorecard, backend usage, 自慢. Skip for: implementation, review, planning, release."
+description-en: "Backend orchestration scorecard (Claude/Codex/Cursor) — HTML + terminal summary. Triggers: scorecard, backend usage, 自慢. Skip for: implementation, review, planning, release."
 description-ja: "このセッション/プロジェクトでどれだけマルチバックエンド (Claude / Codex / Cursor) を活用したかを見せる。ledger と累計から HTML スコアカード + ターミナルサマリを on-demand で生成する。「オーケストレーション活用」「scorecard」「どのバックエンド使った」「Codex/Cursor どれだけ使った」「累計」「自慢」で発動。実装・レビュー・計画・リリースでは読み込まない。"
 allowed-tools: ["Read", "Bash"]
 disallowed-tools: ["Write", "Edit", "MultiEdit"]

@@ -1,6 +1,6 @@
 ---
 name: cursor-setup
-description: "Configure and verify the Cursor backend for Claude Code Harness. Use when user invokes cursor:setup, wants Cursor as the local default implementation backend, or asks to check Cursor plugin/agent readiness. Distribution default remains opt-in; only local env/user settings are changed when explicitly requested."
+description: "Configure and verify Cursor backend for CCH. Triggers: cursor:setup, set Cursor as local default, check Cursor readiness. Distribution default stays opt-in; only local env changes on request."
 ---
 
 # cursor:setup - Cursor Backend Setup

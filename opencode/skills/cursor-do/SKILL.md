@@ -1,6 +1,6 @@
 ---
 name: cursor-do
-description: "Delegate a single write task to Cursor Composer via cursor-companion.sh inside an isolated worktree, then Lead-review the diff and cherry-pick. Use when user invokes cursor:do, says delegate to cursor, have composer write it, refactor with cursor, hand a file edit to Composer. Do NOT load for: planning, code review only, read-only investigation, or multi-task team runs (use breezing --cursor or cursor:ask instead)."
+description: "Delegate write task to Cursor Composer in isolated worktree, Lead-review + cherry-pick. Triggers: cursor:do, delegate to cursor, composer write, refactor with cursor. Skip for: planning, review-only, multi-task."
 ---
 
 # cursor:do — Single-Task Write Delegate to Cursor Composer

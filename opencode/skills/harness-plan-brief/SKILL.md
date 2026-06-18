@@ -1,6 +1,6 @@
 ---
 name: harness-plan-brief
-description: "Generate a Plan Brief HTML for non-engineer vibecoders before implementation starts. Searches harness-mem (project-only) for relevant past decisions, patterns, and Plans archive entries, then renders a single-file HTML artifact summarizing understanding, options, risks, acceptance criteria, and confidence. Use when the user requests a planning preview, a non-engineer-friendly summary before approval, or says: plan brief, planning preview, 計画概要, 計画レビュー. Do NOT load for: actual implementation, code review, release work."
+description: "Plan Brief HTML for pre-implementation preview (searches harness-mem for past decisions/patterns). Triggers: plan brief, planning preview, 計画概要, 計画レビュー. Skip for: implementation, review, release."
 ---
 
 # harness-plan-brief

@@ -1,7 +1,7 @@
 ---
 name: cursor-do
-description: "Delegate a single write task to Cursor Composer via cursor-companion.sh inside an isolated worktree, then Lead-review the diff and cherry-pick. Use when user invokes cursor:do, says delegate to cursor, have composer write it, refactor with cursor, hand a file edit to Composer. Do NOT load for: planning, code review only, read-only investigation, or multi-task team runs (use breezing --cursor or cursor:ask instead)."
-description-en: "Delegate a single write task to Cursor Composer via cursor-companion.sh inside an isolated worktree, then Lead-review the diff and cherry-pick. Use when user invokes cursor:do, says delegate to cursor, have composer write it, refactor with cursor, hand a file edit to Composer. Do NOT load for: planning, code review only, read-only investigation, or multi-task team runs (use breezing --cursor or cursor:ask instead)."
+description: "Delegate write task to Cursor Composer in isolated worktree, Lead-review + cherry-pick. Triggers: cursor:do, delegate to cursor, composer write, refactor with cursor. Skip for: planning, review-only, multi-task."
+description-en: "Delegate write task to Cursor Composer in isolated worktree, Lead-review + cherry-pick. Triggers: cursor:do, delegate to cursor, composer write, refactor with cursor. Skip for: planning, review-only, multi-task."
 description-ja: "1 件の write タスクを Cursor Composer に委譲するスキル。専用 worktree (.claude/worktrees/cursor-do-<id>) を切って `cursor-companion.sh task --write --workspace <wt>` を直接呼び、Lead が diff レビュー → main へ cherry-pick → Plans.md `cc:done [hash]` 更新まで一気通貫する。Use when user mentions cursor:do, cursor で実装して, composer に書かせて, カーソルにやらせて, refactor を Cursor に, ファイル編集を Composer に. Do NOT load for: 計画 (harness-plan), レビューのみ (harness-review), 読み取り調査 (cursor:ask), 複数タスク並列 (breezing --cursor を使う)."
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
 argument-hint: "[task-description]"

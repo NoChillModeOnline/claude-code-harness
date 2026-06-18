@@ -1,6 +1,6 @@
 ---
 name: cursor-ask
-description: "Read-only delegate to cursor-agent (Composer) for questions, investigation, design discussion, and adversarial sanity checks. No worktree, no cherry-pick, no Lead diff review — cursor-agent is locked to ask mode and cannot write. Use when user says: ask cursor, cursor sanity check, get a second opinion, adversarial review, design discussion, investigate with cursor, cursor:ask. Do NOT load for: implementation, refactor, file edits, commit/push work, anything requiring write access (use cursor:do or breezing --cursor instead)."
+description: "Read-only cursor-agent delegate for questions/sanity checks (no writes). Triggers: ask cursor, cursor:ask, second opinion, sanity check. Skip for: implementation (use cursor:do)."
 ---
 
 # cursor:ask — Read-Only Cursor Delegate

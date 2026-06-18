@@ -1,6 +1,6 @@
 ---
 name: memory
-description: "Manage SSOT, memory, and cross-tool memory search. Guardian of decisions.md and patterns.md. Use when user mentions memory, SSOT, decisions.md, patterns.md, merging, migration, SSOT promotion, sync memory, save learnings, memory search, harness-mem, past decisions, or record this. Do NOT load for: implementation work, reviews, ad-hoc notes, or in-session logging."
+description: "SSOT/memory + cross-tool search. Guards decisions.md, patterns.md. Triggers: memory, SSOT, decisions.md, patterns.md, harness-mem, memory search. Skip for: implementation, review."
 ---
 
 # Memory Skills

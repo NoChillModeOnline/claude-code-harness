@@ -1,7 +1,7 @@
 ---
 name: cursor-setup
-description: "Configure and verify the Cursor backend for Claude Code Harness. Use when user invokes cursor:setup, wants Cursor as the local default implementation backend, or asks to check Cursor plugin/agent readiness. Distribution default remains opt-in; only local env/user settings are changed when explicitly requested."
-description-en: "Configure and verify the Cursor backend for Claude Code Harness. Use when user invokes cursor:setup, wants Cursor as the local default implementation backend, or asks to check Cursor plugin/agent readiness. Distribution default remains opt-in; only local env/user settings are changed when explicitly requested."
+description: "Configure and verify Cursor backend for CCH. Triggers: cursor:setup, set Cursor as local default, check Cursor readiness. Distribution default stays opt-in; only local env changes on request."
+description-en: "Configure and verify Cursor backend for CCH. Triggers: cursor:setup, set Cursor as local default, check Cursor readiness. Distribution default stays opt-in; only local env changes on request."
 description-ja: "Claude Code Harness の Cursor backend を設定・検証するスキル。cursor:setup、Cursor を現環境の default 実装 backend にしたい、Cursor plugin/agent readiness を確認したい時に使う。配布 plugin の default は opt-in のまま維持し、明示依頼がある場合だけ local env/user 設定を変更する。"
 allowed-tools: ["Read", "Bash"]
 argument-hint: "[--check | --user-default | --project-default | --unset]"

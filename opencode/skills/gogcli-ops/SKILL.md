@@ -1,6 +1,6 @@
 ---
 name: gogcli-ops
-description: "Use gogcli for Google Workspace CLI operations (Drive/Sheets/Docs/Slides). Trigger when a user asks to check, list, search, export, read, or update Google files via gogcli; when a Google URL/ID needs parsing; when auth/account selection or safe read-only workflows are needed; or when troubleshooting gogcli access/errors. Do NOT load for: general file operations, non-Google cloud storage, or standard shell commands."
+description: "gogcli for Google Workspace ops (Drive/Sheets/Docs/Slides). Triggers: list/search/export/read/update Google files, URL/ID parsing, auth selection. Skip for: non-Google storage, generic shell."
 ---
 
 # Gogcli Ops

@@ -1,7 +1,7 @@
 ---
 name: cursor-ask
-description: "Read-only delegate to cursor-agent (Composer) for questions, investigation, design discussion, and adversarial sanity checks. No worktree, no cherry-pick, no Lead diff review — cursor-agent is locked to ask mode and cannot write. Use when user says: ask cursor, cursor sanity check, get a second opinion, adversarial review, design discussion, investigate with cursor, cursor:ask. Do NOT load for: implementation, refactor, file edits, commit/push work, anything requiring write access (use cursor:do or breezing --cursor instead)."
-description-en: "Read-only delegate to cursor-agent (Composer) for questions, investigation, design discussion, and adversarial sanity checks. No worktree, no cherry-pick, no Lead diff review — cursor-agent is locked to ask mode and cannot write. Use when user says: ask cursor, cursor sanity check, get a second opinion, adversarial review, design discussion, investigate with cursor, cursor:ask. Do NOT load for: implementation, refactor, file edits, commit/push work, anything requiring write access (use cursor:do or breezing --cursor instead)."
+description: "Read-only cursor-agent delegate for questions/sanity checks (no writes). Triggers: ask cursor, cursor:ask, second opinion, sanity check. Skip for: implementation (use cursor:do)."
+description-en: "Read-only cursor-agent delegate for questions/sanity checks (no writes). Triggers: ask cursor, cursor:ask, second opinion, sanity check. Skip for: implementation (use cursor:do)."
 description-ja: "cursor-agent (Composer) への読み取り専用デリゲート。質問・調査・設計相談・敵対的視点（sanity check）用。worktree 不要、cherry-pick 不要、Lead diff review 不要。cursor は ask mode 固定で書き込み不可。Use when user says: cursor に聞いて, cursor に相談, セカンドオピニオン, 敵対的レビュー, 設計相談, cursor で調査, cursor:ask. Do NOT load for: 実装、リファクタ、ファイル編集、コミット/プッシュ作業、書き込みが必要な作業 (代わりに cursor:do / breezing --cursor を使う)。"
 allowed-tools: ["Read", "Bash"]
 argument-hint: "[question]"

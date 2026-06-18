@@ -1,6 +1,6 @@
 ---
 name: cc-cursor-cc
-description: "Validates brainstormed ideas with Cursor PM, updates Plans.md, then handoff back. Cursor ↔ Claude Code 2-Agent workflow support. Use when user mentions Cursor PM handoff, 2-agent plan validation, CC-Cursor round trip, or brainstorm review. Do NOT load for: implementation work, single-agent tasks, or direct coding."
+description: "Validate brainstorm with Cursor PM, update Plans.md, handoff back. Cursor↔CC 2-agent workflow. Triggers: Cursor PM handoff, 2-agent plan validation, brainstorm review. Skip for: implementation, single-agent."
 ---
 
 # CC-Cursor-CC Skill (Plan Validation Round Trip)

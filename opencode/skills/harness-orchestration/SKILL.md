@@ -1,6 +1,6 @@
 ---
 name: harness-orchestration
-description: "Show how much this session/project orchestrated across backends (Claude / Codex / Cursor). Renders an on-demand HTML scorecard + terminal summary from the orchestration ledger and lifetime totals. Use when the user asks to see orchestration usage, a backend scorecard, which backend was used, how much Codex/Cursor was used, lifetime totals, or wants something to show off (自慢). Do NOT load for: implementing tasks, reviews, planning, or release."
+description: "Backend orchestration scorecard (Claude/Codex/Cursor) — HTML + terminal summary. Triggers: scorecard, backend usage, 自慢. Skip for: implementation, review, planning, release."
 ---
 
 # Harness Orchestration Scorecard

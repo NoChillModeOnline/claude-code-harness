@@ -1,6 +1,6 @@
 ---
 name: harness-accept
-description: "Generate an Acceptance Demo HTML for non-engineer vibecoders right before ship/wait/reject decision. Reads back the acceptance_criteria that were stored as personal-preference.v1 by harness-plan-brief (joined by user_request_hash), then renders a single-file HTML showing each criterion as verified or unverified along with a ship/wait/reject recommendation. Use when the user asks for an acceptance review, wants to decide whether to ship a delivered task, or says: acceptance demo, accept demo, 受け入れ判断, 受入レビュー, ship/wait/reject 判定, 検収レビュー. Do NOT load for: implementation, code review, release work."
+description: "Acceptance Demo HTML for ship/wait/reject decision — reads stored acceptance_criteria. Triggers: 受け入れ判断, ship/wait/reject, 検収レビュー, acceptance demo. Skip for: implementation, review, release."
 ---
 
 # harness-accept
