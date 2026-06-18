@@ -152,6 +152,10 @@ fi
 ## (codex review P2 regression: index-mutating commands must not bypass review)
 echo "[5] 'git add VERSION && git commit' chained → bypass を許さず deny"
 SANDBOX_D="$(mktemp -d)"
+# Subagent review finding: update trap immediately after each mktemp -d so a
+# failure between creation and the next trap update does not leak the temp dir
+# under `set -euo pipefail`.
+trap 'rm -rf "$SANDBOX_A" "$SANDBOX_B" "$SANDBOX_C" "$SANDBOX_D"' EXIT
 make_sandbox "$SANDBOX_D"
 (
   cd "$SANDBOX_D"

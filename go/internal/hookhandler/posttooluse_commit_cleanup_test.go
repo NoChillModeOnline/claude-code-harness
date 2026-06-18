@@ -155,22 +155,35 @@ func TestIsGitCommitCommand(t *testing.T) {
 
 func TestContainsErrorIndicator(t *testing.T) {
 	tests := []struct {
+		name   string
 		result string
 		want   bool
 	}{
-		{"[main abc] feat: done", false},
-		{"error: nothing to commit", true},
-		{"fatal: not a git repository", true},
-		{"nothing to commit, working tree clean", true},
-		{"failed to write", true},
-		{"FAILED tests", true},
-		{"", false},
+		{"plain success", "[main abc] feat: done", false},
+		{"error prefix", "error: nothing to commit", true},
+		{"fatal prefix", "fatal: not a git repository", true},
+		{"nothing-to-commit clean output", "nothing to commit, working tree clean", true},
+		{"failed write", "failed to write", true},
+		{"uppercase FAILED", "FAILED tests", true},
+		{"empty", "", false},
+		// Subagent review regression: success output whose commit message contains
+		// "nothing to commit" must NOT be classified as an error. Without the git
+		// success prefix bypass, this would silently skip the approval clear and
+		// allow the next commit to bypass re-review.
+		{"success with 'nothing to commit' in message",
+			"[main abc1234] fix nothing to commit edge case\n 1 file changed, 1 insertion(+)", false},
+		{"success with 'error' in message",
+			"[main def5678] handle error path explicitly", false},
+		{"success with 'failed' in message",
+			"[feature/x 0011223] retry when remote call failed", false},
+		// Multi-line failure still detected (no success prefix at the top).
+		{"multi-line failure", "fatal: bad object HEAD\ngit commit failed", true},
 	}
 
 	for _, tt := range tests {
 		got := containsErrorIndicator(tt.result)
 		if got != tt.want {
-			t.Errorf("containsErrorIndicator(%q) = %v, want %v", tt.result, got, tt.want)
+			t.Errorf("[%s] containsErrorIndicator(%q) = %v, want %v", tt.name, tt.result, got, tt.want)
 		}
 	}
 }

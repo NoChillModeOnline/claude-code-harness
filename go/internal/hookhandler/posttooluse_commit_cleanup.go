@@ -6,9 +6,16 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"time"
 )
+
+// gitCommitSuccessRe は `git commit` 成功時の典型的な出力 prefix
+// `[<branch> <hash>]` (例: `[main abc1234]`) を検出する正規表現。
+// commit message に "nothing to commit" 等の error indicator phrase が含まれていても、
+// この prefix が先頭にあれば commit は成功している。
+var gitCommitSuccessRe = regexp.MustCompile(`^\[[^\]]+\s+[0-9a-fA-F]+\]`)
 
 // bookkeepingFiles はリリース時の bookkeeping commit が変更してよいファイル集合 (#219 fix)。
 // この集合のみを変更する commit はレビュー対象外として承認状態を保持する。
@@ -247,7 +254,18 @@ func isWordBoundaryBefore(c byte) bool {
 }
 
 // containsErrorIndicator はツール結果にエラーの兆候が含まれているかを判定する。
+//
+// 修正 (subagent review finding): commit message に "nothing to commit" 等の
+// error indicator phrase が含まれる成功 commit (例: `git commit -m "fix nothing
+// to commit edge case"` → 出力 `[main abc1234] fix nothing to commit edge case`)
+// を error と誤判定して承認状態クリアを skip すると、後続 commit が APPROVE 無し
+// で通る bypass が成立する。そこで git の成功 prefix `[<branch> <hash>]` を
+// 最初に検出し、成功と判定したら以降の error indicator チェックは skip する。
 func containsErrorIndicator(result string) bool {
+	trimmed := strings.TrimSpace(result)
+	if gitCommitSuccessRe.MatchString(trimmed) {
+		return false
+	}
 	lower := strings.ToLower(result)
 	for _, indicator := range []string{"error", "fatal", "failed", "nothing to commit"} {
 		if strings.Contains(lower, indicator) {

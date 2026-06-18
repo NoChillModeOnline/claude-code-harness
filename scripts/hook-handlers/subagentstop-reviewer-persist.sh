@@ -155,11 +155,20 @@ COMMIT_HASH="$(git rev-parse --short HEAD 2>/dev/null || true)"
 bash "$PLUGIN_ROOT/scripts/write-review-result.sh" "$TMP_JSON" "$COMMIT_HASH" >/dev/null 2>&1 || true
 
 # Append audit entry so operators can see backstop activations.
+# Subagent review finding: build the JSONL line via jq -n --arg so that any
+# special characters (double quotes, newlines, backslashes) in $VERDICT or
+# $SESSION_ID cannot corrupt the audit log. This matches the Go-side
+# appendCleanupAuditLog (encoding/json) safety contract.
 mkdir -p .claude/state 2>/dev/null || true
 AUDIT_LOG=".claude/state/subagentstop-persist-audit.jsonl"
 VERDICT="$(jq -r '.verdict // empty' "$TMP_JSON" 2>/dev/null || true)"
 TS="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || true)"
-printf '{"ts":"%s","session_id":"%s","verdict":"%s","commit_hash":"%s","source":"subagentstop-reviewer-persist"}\n' \
-  "$TS" "$SESSION_ID" "$VERDICT" "$COMMIT_HASH" >> "$AUDIT_LOG" 2>/dev/null || true
+jq -cn \
+  --arg ts "$TS" \
+  --arg session_id "$SESSION_ID" \
+  --arg verdict "$VERDICT" \
+  --arg commit_hash "$COMMIT_HASH" \
+  '{ts:$ts, session_id:$session_id, verdict:$verdict, commit_hash:$commit_hash, source:"subagentstop-reviewer-persist"}' \
+  >> "$AUDIT_LOG" 2>/dev/null || true
 
 exit 0

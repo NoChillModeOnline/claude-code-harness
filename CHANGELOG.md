@@ -30,7 +30,7 @@ Change history for claude-code-harness.
 
 **今まで**: 出力言語の切替方法（英語 default / 日本語 opt-in）は CLAUDE.md の Language 節に短く書かれているだけで、README からは直接たどれませんでした。新規ユーザーは英語以外で出力する方法を見つけるのに時間がかかっていました。
 
-**今後**: `docs/i18n.md` を新規 SSOT として作成し、3 経路（`harness.toml [i18n] language` / `CLAUDE_CODE_HARNESS_LANG=ja` / per-message session 指示）と precedence、「変更されない箇所」（machine-readable JSON, commit prefixes）を明示。README の Documentation 表と CLAUDE.md Language 節からリンクしています。
+**今後**: `docs/i18n.md` を新規 SSOT として作成し、3 経路（`.claude-code-harness.config.yaml` の `i18n.language` / `CLAUDE_CODE_HARNESS_LANG=ja` / per-message session 指示）と precedence（config > env > en）、「変更されない箇所」（machine-readable JSON, commit prefixes）を明示。README の Documentation 表と CLAUDE.md Language 節からリンクしています。
 
 #### Reviewer の cyber-related safeguard 中断への mitigation（#172）
 
