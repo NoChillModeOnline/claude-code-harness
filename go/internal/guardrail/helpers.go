@@ -480,14 +480,6 @@ func isProtectedReviewPath(filePath string) bool {
 // Secret file staging detection (R15)
 // ---------------------------------------------------------------------------
 
-// gitSubcmdSeparator splits a compound shell command into its individual
-// sub-commands. Listing the longer operators first (&&, ||) keeps Go's
-// leftmost-first alternation from splitting them into single `&`/`|` tokens,
-// so `git add .env&&git commit` (no surrounding spaces) is still separated.
-// `$(`, `)` and backtick are included so a subshell-wrapped invocation such as
-// `$(git add .env)` or “ `git add .env` “ is split out as its own segment.
-var gitSubcmdSeparator = regexp.MustCompile("&&|\\|\\||;|\\||&|\\$\\(|\\)|`")
-
 // gitGlobalValueOpts are git global options that consume the following token as
 // their value when written as a separate token (e.g. `-C /repo`, not
 // `--git-dir=/repo`). They may appear between `git` and the subcommand.
@@ -521,42 +513,81 @@ var r15SecretStagingPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?:^|/)\.ssh/`),
 }
 
-// gitAddPathspecs returns the pathspec arguments of a `git add`/`git stage`
-// invocation, skipping flags. `git add` takes no message option, so every
-// non-flag token is a pathspec.
-func gitAddPathspecs(args []string) []string {
-	var out []string
-	for _, t := range args {
-		tok := stripShellTokenQuotes(t)
-		if tok == "" || tok == "--" || strings.HasPrefix(tok, "-") {
-			continue
-		}
-		out = append(out, tok)
-	}
-	return out
+// shellToken is one lexed token of a shell command. op marks a control operator
+// (`&&`, `||`, `;`, `|`, `&`, `$(`, `)`, backtick) that ends a sub-command;
+// quoted marks a token whose content came (wholly or partly) from inside single
+// or double quotes, so a quoted "--" or pathspec is not mistaken for a bare one.
+type shellToken struct {
+	value  string
+	quoted bool
+	op     bool
 }
 
-// gitCommitPathspecs returns the pathspec arguments of a `git commit`
-// invocation. Only tokens after the `--` separator are treated as pathspecs.
-// This avoids misreading a `-m "fix .env loading"` commit message as a path.
-func gitCommitPathspecs(args []string) []string {
-	var out []string
-	sawSep := false
-	for _, t := range args {
-		if t == "--" {
-			sawSep = true
-			continue
+// shellLex tokenizes a command while respecting single/double quotes. Control
+// operators become op tokens; whitespace separates tokens; characters inside
+// quotes (including separators like ';' or '&&') are kept literal. This makes
+// `git commit -m "x; y" -- .env` stay a single sub-command whose message is one
+// quoted token, instead of being split at the in-message ';'.
+func shellLex(command string) []shellToken {
+	var tokens []shellToken
+	var cur strings.Builder
+	curQuoted := false
+	curHas := false
+	var quote byte // 0, '\'' or '"'
+
+	emit := func() {
+		if curHas {
+			tokens = append(tokens, shellToken{value: cur.String(), quoted: curQuoted})
 		}
-		if !sawSep {
-			continue
-		}
-		tok := stripShellTokenQuotes(t)
-		if tok == "" || strings.HasPrefix(tok, "-") {
-			continue
-		}
-		out = append(out, tok)
+		cur.Reset()
+		curQuoted = false
+		curHas = false
 	}
-	return out
+	emitOp := func() {
+		emit()
+		tokens = append(tokens, shellToken{op: true})
+	}
+
+	for i := 0; i < len(command); i++ {
+		c := command[i]
+		if quote != 0 {
+			if c == quote {
+				quote = 0
+			} else {
+				cur.WriteByte(c)
+				curHas = true
+			}
+			continue
+		}
+		switch c {
+		case '\'', '"':
+			quote = c
+			curQuoted = true
+			curHas = true // an empty "" is still a (quoted) token
+		case ' ', '\t', '\n', '\r':
+			emit()
+		case ';', ')', '`':
+			emitOp()
+		case '|', '&':
+			if i+1 < len(command) && command[i+1] == c {
+				i++ // collapse "||" / "&&" into one operator
+			}
+			emitOp()
+		case '$':
+			if i+1 < len(command) && command[i+1] == '(' {
+				i++
+				emitOp()
+			} else {
+				cur.WriteByte(c)
+				curHas = true
+			}
+		default:
+			cur.WriteByte(c)
+			curHas = true
+		}
+	}
+	emit()
+	return tokens
 }
 
 // indexOfGitSubcommand returns the index of the git subcommand token (e.g.
@@ -564,19 +595,19 @@ func gitCommitPathspecs(args []string) []string {
 // options (and their values) that appear between `git` and the subcommand. This
 // makes `git -C /repo add .env` resolve to the "add" token. Returns -1 when the
 // segment has no git invocation with a subcommand.
-func indexOfGitSubcommand(tokens []string) int {
+func indexOfGitSubcommand(tokens []shellToken) int {
 	for i := 0; i < len(tokens); i++ {
-		if normalizeGitToken(tokens[i]) != "git" {
+		if tokens[i].quoted || tokens[i].value != "git" {
 			continue
 		}
 		for j := i + 1; j < len(tokens); j++ {
-			tok := tokens[j]
-			if !strings.HasPrefix(tok, "-") {
+			t := tokens[j]
+			if t.quoted || !strings.HasPrefix(t.value, "-") {
 				return j // first non-option token is the subcommand
 			}
 			// Skip a separate value token for value-taking global options
 			// (e.g. "-C /repo"). The "--opt=value" form is a single token.
-			if !strings.Contains(tok, "=") && gitGlobalValueOpts[tok] {
+			if !strings.Contains(t.value, "=") && gitGlobalValueOpts[t.value] {
 				j++
 			}
 		}
@@ -585,30 +616,80 @@ func indexOfGitSubcommand(tokens []string) int {
 	return -1
 }
 
+// gitAddPathspecs returns the pathspec arguments of a `git add`/`git stage`
+// invocation. Quoted tokens are always pathspecs; bare flags and a bare `--`
+// separator are skipped. `git add` takes no message option.
+func gitAddPathspecs(args []shellToken) []string {
+	var out []string
+	for _, t := range args {
+		if !t.quoted && (t.value == "--" || strings.HasPrefix(t.value, "-")) {
+			continue
+		}
+		if t.value == "" {
+			continue
+		}
+		out = append(out, t.value)
+	}
+	return out
+}
+
+// gitCommitPathspecs returns the pathspec arguments of a `git commit`
+// invocation: only tokens after a bare (unquoted) `--` separator. This ignores
+// a `-m "fix .env"` message entirely — the message is a quoted token, and a
+// `--` appearing inside that quoted message is not treated as the separator.
+func gitCommitPathspecs(args []shellToken) []string {
+	var out []string
+	sawSep := false
+	for _, t := range args {
+		if !sawSep {
+			if !t.quoted && t.value == "--" {
+				sawSep = true
+			}
+			continue
+		}
+		if t.value != "" {
+			out = append(out, t.value) // after --, every token is a pathspec
+		}
+	}
+	return out
+}
+
 // extractGitStagedPaths returns every path that a command would add to the git
-// index via `git add`/`git stage`/`git commit <pathspec>`. Each sub-command is
-// inspected independently so chained commands are all covered.
+// index via `git add`/`git stage`/`git commit <pathspec>`. The command is lexed
+// quote-aware and split into sub-commands at control operators, so chained and
+// subshell-wrapped invocations are all covered.
 //
 // Known accepted scope gaps (consistent with the bulk `git add .` case): paths
 // supplied to git through stdin (`echo .env | xargs git add`) are invisible to
 // command-string analysis, and `git commit -a` re-stages already-tracked files
 // without naming them. Both rely on .gitignore plus the R02/R03 write guards.
 func extractGitStagedPaths(command string) []string {
-	normalized := normalizeCommand(command)
 	var paths []string
-	for _, part := range gitSubcmdSeparator.Split(normalized, -1) {
-		tokens := strings.Fields(part)
-		idx := indexOfGitSubcommand(tokens)
-		if idx < 0 {
+	var segment []shellToken
+
+	flush := func() {
+		if len(segment) == 0 {
+			return
+		}
+		if idx := indexOfGitSubcommand(segment); idx >= 0 {
+			switch segment[idx].value {
+			case "add", "stage":
+				paths = append(paths, gitAddPathspecs(segment[idx+1:])...)
+			case "commit":
+				paths = append(paths, gitCommitPathspecs(segment[idx+1:])...)
+			}
+		}
+		segment = nil
+	}
+
+	for _, tok := range shellLex(command) {
+		if tok.op {
+			flush()
 			continue
 		}
-		switch normalizeGitToken(tokens[idx]) {
-		case "add", "stage":
-			paths = append(paths, gitAddPathspecs(tokens[idx+1:])...)
-		case "commit":
-			paths = append(paths, gitCommitPathspecs(tokens[idx+1:])...)
-		}
+		segment = append(segment, tok)
 	}
+	flush()
 	return paths
 }
 

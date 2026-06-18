@@ -1338,3 +1338,38 @@ func TestR15_GitAddShellRcNotBlocked(t *testing.T) {
 		}
 	}
 }
+
+// --- R15 quote-aware lexing (CodeRabbit critical follow-up) ---
+
+func TestR15_CommitMsgSemicolonThenSecretPathspec(t *testing.T) {
+	// A ';' inside the quoted message must not split the command and let the
+	// `-- secret.pem` pathspec escape detection.
+	ctx := makeCtx("Bash", map[string]interface{}{"command": "git commit -m \"x; y\" -- secret.pem"})
+	if result := EvaluateRules(ctx); result.Decision != hookproto.DecisionDeny {
+		t.Errorf("expected deny for commit msg with ';' then -- secret.pem, got %s", result.Decision)
+	}
+}
+
+func TestR15_CommitMsgAndOperatorThenSecretPathspec(t *testing.T) {
+	ctx := makeCtx("Bash", map[string]interface{}{"command": "git commit -m \"x && y\" -- .env"})
+	if result := EvaluateRules(ctx); result.Decision != hookproto.DecisionDeny {
+		t.Errorf("expected deny for commit msg with '&&' then -- .env, got %s", result.Decision)
+	}
+}
+
+func TestR15_CommitMsgContainsDashDashEnvNoFalsePositive(t *testing.T) {
+	// "--" and ".env" living INSIDE the quoted message must not be read as a
+	// pathspec separator + secret path.
+	ctx := makeCtx("Bash", map[string]interface{}{"command": "git commit -m \"fix -- .env handling\""})
+	if result := EvaluateRules(ctx); result.Decision != hookproto.DecisionApprove {
+		t.Errorf("expected approve for -- .env inside quoted message, got %s", result.Decision)
+	}
+}
+
+func TestR15_CommitQuotedSecretPathspec(t *testing.T) {
+	// A genuinely quoted pathspec after a bare -- is still a real path.
+	ctx := makeCtx("Bash", map[string]interface{}{"command": "git commit -m wip -- \".env\""})
+	if result := EvaluateRules(ctx); result.Decision != hookproto.DecisionDeny {
+		t.Errorf("expected deny for commit -- \".env\", got %s", result.Decision)
+	}
+}
