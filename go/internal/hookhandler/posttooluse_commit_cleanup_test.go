@@ -2,6 +2,7 @@ package hookhandler
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -197,5 +198,190 @@ func TestCommitCleanupHandler_StderrMessage(t *testing.T) {
 	// ログメッセージが出力されること
 	if !strings.Contains(out.String(), "レビュー承認状態をクリア") {
 		t.Errorf("expected cleanup log message, got %q", out.String())
+	}
+}
+
+// ============================================================
+// Phase 94.1.3 (#219 fix) bookkeeping-only commit recognition
+// ============================================================
+
+// fakeGitRunner allows deterministic responses for git subcommands.
+type fakeGitRunner struct {
+	merge          bool
+	changedFiles   []string
+	gitUnavailable bool
+}
+
+func (g *fakeGitRunner) run(args ...string) (string, error) {
+	if g.gitUnavailable {
+		return "", fmt.Errorf("git unavailable")
+	}
+	// args例: ["rev-parse", "--verify", "HEAD^2"] or ["show", "--name-only", "--format=", "HEAD"]
+	if len(args) >= 2 && args[0] == "rev-parse" && args[len(args)-1] == "HEAD^2" {
+		if g.merge {
+			return "deadbeef\n", nil
+		}
+		return "", fmt.Errorf("HEAD^2 not found")
+	}
+	if len(args) >= 2 && args[0] == "show" {
+		return strings.Join(g.changedFiles, "\n") + "\n", nil
+	}
+	return "", fmt.Errorf("unexpected git args: %v", args)
+}
+
+func setupReviewFiles(t *testing.T, dir string) (string, string) {
+	t.Helper()
+	stateDir := filepath.Join(dir, ".claude", "state")
+	if err := os.MkdirAll(stateDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	reviewState := filepath.Join(stateDir, "review-approved.json")
+	reviewResult := filepath.Join(stateDir, "review-result.json")
+	if err := os.WriteFile(reviewState, []byte(`{"approved":true}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(reviewResult, []byte(`{"verdict":"APPROVE"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return reviewState, reviewResult
+}
+
+func TestCommitCleanup_BookkeepingOnly_KeepsApproval(t *testing.T) {
+	dir := t.TempDir()
+	reviewState, reviewResult := setupReviewFiles(t, dir)
+
+	runner := &fakeGitRunner{
+		changedFiles: []string{"VERSION", "CHANGELOG.md", ".claude-plugin/plugin.json", "harness.toml"},
+	}
+	h := &CommitCleanupHandler{ProjectRoot: dir, GitRunner: runner.run}
+	input := `{"tool_name":"Bash","tool_input":{"command":"git commit -m 'release: v1.2.3'"},"tool_result":"[main abc1234] release: v1.2.3"}`
+
+	var out bytes.Buffer
+	if err := h.Handle(strings.NewReader(input), &out); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if _, err := os.Stat(reviewState); err != nil {
+		t.Errorf("expected review-approved.json to be kept (bookkeeping commit), got error: %v", err)
+	}
+	if _, err := os.Stat(reviewResult); err != nil {
+		t.Errorf("expected review-result.json to be kept (bookkeeping commit), got error: %v", err)
+	}
+	if !strings.Contains(out.String(), "bookkeeping-only") {
+		t.Errorf("expected bookkeeping-only message, got %q", out.String())
+	}
+
+	// audit log
+	auditPath := filepath.Join(dir, ".claude", "state", "commit-cleanup-audit.jsonl")
+	auditBody, err := os.ReadFile(auditPath)
+	if err != nil {
+		t.Fatalf("expected audit log to be appended, got error: %v", err)
+	}
+	if !strings.Contains(string(auditBody), `"approval_kept":true`) {
+		t.Errorf("expected approval_kept=true in audit log, got %q", string(auditBody))
+	}
+	if !strings.Contains(string(auditBody), `"reason":"bookkeeping-only"`) {
+		t.Errorf("expected reason=bookkeeping-only in audit log, got %q", string(auditBody))
+	}
+}
+
+func TestCommitCleanup_CodePlusBookkeepingMix_ClearsApproval(t *testing.T) {
+	dir := t.TempDir()
+	reviewState, reviewResult := setupReviewFiles(t, dir)
+
+	runner := &fakeGitRunner{
+		changedFiles: []string{"VERSION", "src/main.go", "CHANGELOG.md"},
+	}
+	h := &CommitCleanupHandler{ProjectRoot: dir, GitRunner: runner.run}
+	input := `{"tool_name":"Bash","tool_input":{"command":"git commit -m mixed"},"tool_result":"[main abc1234] mixed"}`
+
+	var out bytes.Buffer
+	if err := h.Handle(strings.NewReader(input), &out); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if _, err := os.Stat(reviewState); err == nil {
+		t.Errorf("expected review-approved.json to be cleared (mixed commit)")
+	}
+	if _, err := os.Stat(reviewResult); err == nil {
+		t.Errorf("expected review-result.json to be cleared (mixed commit)")
+	}
+
+	auditPath := filepath.Join(dir, ".claude", "state", "commit-cleanup-audit.jsonl")
+	auditBody, _ := os.ReadFile(auditPath)
+	if !strings.Contains(string(auditBody), `"reason":"code-change"`) {
+		t.Errorf("expected reason=code-change in audit log, got %q", string(auditBody))
+	}
+}
+
+func TestCommitCleanup_CodeOnly_ClearsApproval(t *testing.T) {
+	dir := t.TempDir()
+	reviewState, reviewResult := setupReviewFiles(t, dir)
+
+	runner := &fakeGitRunner{
+		changedFiles: []string{"src/main.go", "src/util.go"},
+	}
+	h := &CommitCleanupHandler{ProjectRoot: dir, GitRunner: runner.run}
+	input := `{"tool_name":"Bash","tool_input":{"command":"git commit -m feat"},"tool_result":"[main abc1234] feat"}`
+
+	var out bytes.Buffer
+	if err := h.Handle(strings.NewReader(input), &out); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if _, err := os.Stat(reviewState); err == nil {
+		t.Errorf("expected review-approved.json to be cleared (code commit)")
+	}
+	if _, err := os.Stat(reviewResult); err == nil {
+		t.Errorf("expected review-result.json to be cleared (code commit)")
+	}
+}
+
+func TestCommitCleanup_MergeCommit_KeepsApproval(t *testing.T) {
+	dir := t.TempDir()
+	reviewState, reviewResult := setupReviewFiles(t, dir)
+
+	runner := &fakeGitRunner{merge: true}
+	h := &CommitCleanupHandler{ProjectRoot: dir, GitRunner: runner.run}
+	input := `{"tool_name":"Bash","tool_input":{"command":"git commit -m 'Merge branch foo'"},"tool_result":"[main abc1234] Merge"}`
+
+	var out bytes.Buffer
+	if err := h.Handle(strings.NewReader(input), &out); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if _, err := os.Stat(reviewState); err != nil {
+		t.Errorf("expected review-approved.json to be kept (merge commit), got error: %v", err)
+	}
+	if _, err := os.Stat(reviewResult); err != nil {
+		t.Errorf("expected review-result.json to be kept (merge commit), got error: %v", err)
+	}
+	if !strings.Contains(out.String(), "merge") {
+		t.Errorf("expected merge message, got %q", out.String())
+	}
+}
+
+func TestCommitCleanup_GitUnavailable_FallsBackToClear(t *testing.T) {
+	// git 取得失敗時は fail-closed (= 従来動作 = 削除) を維持
+	dir := t.TempDir()
+	reviewState, _ := setupReviewFiles(t, dir)
+
+	runner := &fakeGitRunner{gitUnavailable: true}
+	h := &CommitCleanupHandler{ProjectRoot: dir, GitRunner: runner.run}
+	input := `{"tool_name":"Bash","tool_input":{"command":"git commit -m x"},"tool_result":"[main abc1234] x"}`
+
+	var out bytes.Buffer
+	if err := h.Handle(strings.NewReader(input), &out); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if _, err := os.Stat(reviewState); err == nil {
+		t.Errorf("expected approval to be cleared on git failure (fail-closed)")
+	}
+
+	auditPath := filepath.Join(dir, ".claude", "state", "commit-cleanup-audit.jsonl")
+	auditBody, _ := os.ReadFile(auditPath)
+	if !strings.Contains(string(auditBody), `"reason":"git-unavailable"`) {
+		t.Errorf("expected reason=git-unavailable in audit log, got %q", string(auditBody))
 	}
 }

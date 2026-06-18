@@ -5,8 +5,32 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"strings"
+	"time"
 )
+
+// bookkeepingFiles はリリース時の bookkeeping commit が変更してよいファイル集合 (#219 fix)。
+// この集合のみを変更する commit はレビュー対象外として承認状態を保持する。
+var bookkeepingFiles = map[string]struct{}{
+	"VERSION":                    {},
+	".claude-plugin/plugin.json": {},
+	"harness.toml":               {},
+	"CHANGELOG.md":               {},
+}
+
+// gitRunner は git コマンド実行を抽象化するインターフェース (テストモック用)。
+type gitRunner func(args ...string) (string, error)
+
+// defaultGitRunner は実環境で git を実行する。
+func defaultGitRunner(projectRoot string) gitRunner {
+	return func(args ...string) (string, error) {
+		all := append([]string{"-C", projectRoot}, args...)
+		cmd := exec.Command("git", all...)
+		out, err := cmd.Output()
+		return string(out), err
+	}
+}
 
 // CommitCleanupHandler は PostToolUse フックハンドラ（git commit 後のクリーンアップ）。
 // git commit コマンドが成功した後に、レビュー承認状態ファイルを削除する。
@@ -15,6 +39,8 @@ import (
 type CommitCleanupHandler struct {
 	// ProjectRoot はプロジェクトルートのパス。空の場合は cwd を使用する。
 	ProjectRoot string
+	// GitRunner は git コマンド実行関数 (テスト用)。空の場合は defaultGitRunner を使用する。
+	GitRunner gitRunner
 }
 
 // commitCleanupInput は PostToolUse フックの stdin JSON。
@@ -89,6 +115,21 @@ func (h *CommitCleanupHandler) Handle(r io.Reader, w io.Writer) error {
 	resultFileExists := fileExists(reviewResultFile)
 
 	if stateFileExists || resultFileExists {
+		// #219 fix: bookkeeping-only commit (VERSION / plugin.json / harness.toml / CHANGELOG.md)
+		// および merge commit は承認状態を保持する。harness-release の multi-commit フロー
+		// (work commit + version bump commit) の bump 側がブロックされる問題を防ぐ。
+		runner := h.GitRunner
+		if runner == nil {
+			runner = defaultGitRunner(projectRoot)
+		}
+		reason, kept := classifyHeadCommitForCleanup(runner)
+		_ = appendCleanupAuditLog(projectRoot, reason, kept)
+
+		if kept {
+			_, _ = fmt.Fprintf(w, "[Commit Guard] %s commit を検出 — レビュー承認状態を保持しました (#219)。\n", reason)
+			return nil
+		}
+
 		_ = os.Remove(reviewStateFile)
 		_ = os.Remove(reviewResultFile)
 
@@ -96,6 +137,66 @@ func (h *CommitCleanupHandler) Handle(r io.Reader, w io.Writer) error {
 	}
 
 	return nil
+}
+
+// classifyHeadCommitForCleanup は HEAD commit の種別を判定し、承認保持すべきかを返す。
+// 戻り値: (reason, keepApproval)
+//   - ("merge", true)            HEAD は merge commit
+//   - ("bookkeeping-only", true) 変更が bookkeepingFiles 集合のみ
+//   - ("code-change", false)     コード変更を含む通常 commit (= 従来動作: 承認削除)
+//   - ("git-unavailable", false) git 取得失敗 (fail-closed: 承認削除 = 従来動作)
+//   - ("empty", false)           空 commit (fail-closed)
+func classifyHeadCommitForCleanup(runner gitRunner) (string, bool) {
+	// merge commit 判定: HEAD^2 が存在 = merge
+	if _, err := runner("rev-parse", "--verify", "HEAD^2"); err == nil {
+		return "merge", true
+	}
+
+	// HEAD commit の変更ファイル一覧を取得
+	out, err := runner("show", "--name-only", "--format=", "HEAD")
+	if err != nil {
+		return "git-unavailable", false
+	}
+	out = strings.TrimSpace(out)
+	if out == "" {
+		return "empty", false
+	}
+
+	for _, line := range strings.Split(out, "\n") {
+		f := strings.TrimSpace(line)
+		if f == "" {
+			continue
+		}
+		if _, ok := bookkeepingFiles[f]; !ok {
+			return "code-change", false
+		}
+	}
+	return "bookkeeping-only", true
+}
+
+// appendCleanupAuditLog は cleanup の判定結果を .claude/state/commit-cleanup-audit.jsonl
+// に append-only で記録する (#219 fix の判定根拠監査)。
+func appendCleanupAuditLog(projectRoot, reason string, kept bool) error {
+	dir := projectRoot + "/.claude/state"
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	path := dir + "/commit-cleanup-audit.jsonl"
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	entry := map[string]interface{}{
+		"ts":            time.Now().UTC().Format(time.RFC3339),
+		"reason":        reason,
+		"approval_kept": kept,
+		"source":        "posttooluse_commit_cleanup",
+	}
+	b, _ := json.Marshal(entry)
+	_, err = fmt.Fprintf(f, "%s\n", string(b))
+	return err
 }
 
 // isGitCommitCommand は command 文字列に git commit が含まれているかを判定する。
