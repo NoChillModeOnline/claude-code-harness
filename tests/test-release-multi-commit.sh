@@ -148,6 +148,46 @@ else
   pass=$((pass + 1))
 fi
 
+## (5) chained `git add ... && git commit` is NOT bookkeeping-exempt
+## (codex review P2 regression: index-mutating commands must not bypass review)
+echo "[5] 'git add VERSION && git commit' chained → bypass を許さず deny"
+SANDBOX_D="$(mktemp -d)"
+make_sandbox "$SANDBOX_D"
+(
+  cd "$SANDBOX_D"
+  echo "1.0.1" > VERSION
+  # index にはまだ何も staged しない (chained コマンドが直前に staging するシナリオ)
+)
+GUARD_OUT_D=$(invoke_guard "$SANDBOX_D" "git add VERSION && git commit -m 'bump'")
+if printf '%s' "$GUARD_OUT_D" | grep -qE '"(permissionDecision|decision)"[[:space:]]*:[[:space:]]*"deny"'; then
+  echo "  PASS  chained git add && commit is denied (no bypass)"
+  pass=$((pass + 1))
+else
+  echo "  FAIL  chained git add+commit incorrectly exempted. out=$GUARD_OUT_D"
+  fail=$((fail + 1))
+fi
+
+## (6) chained command that swaps bookkeeping index for code is NOT exempt
+echo "[6] 'git add src/main.go && git commit' chained → deny (code-bearing)"
+SANDBOX_E="$(mktemp -d)"
+trap 'rm -rf "$SANDBOX_A" "$SANDBOX_B" "$SANDBOX_C" "$SANDBOX_D" "$SANDBOX_E"' EXIT
+make_sandbox "$SANDBOX_E"
+(
+  cd "$SANDBOX_E"
+  echo "1.0.1" > VERSION
+  git add VERSION   # 古い bookkeeping staging を残しておく (bypass シナリオ)
+  echo "package main // change" > main.go
+  # bookkeeping は staged だが、command でさらに code を add してから commit
+)
+GUARD_OUT_E=$(invoke_guard "$SANDBOX_E" "git add main.go && git commit -m 'mix'")
+if printf '%s' "$GUARD_OUT_E" | grep -qE '"(permissionDecision|decision)"[[:space:]]*:[[:space:]]*"deny"'; then
+  echo "  PASS  index-mutating command is denied (no bypass)"
+  pass=$((pass + 1))
+else
+  echo "  FAIL  index-mutating command incorrectly exempted. out=$GUARD_OUT_E"
+  fail=$((fail + 1))
+fi
+
 echo
 echo "[summary] pass=${pass} fail=${fail}"
 [ "${fail}" -eq 0 ]

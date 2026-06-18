@@ -1245,8 +1245,24 @@ if [ "$TOOL_NAME" = "Bash" ]; then
       # harness.toml / CHANGELOG.md のみ) はレビュー対象外で commit guard を免除。
       # harness-release の multi-commit (work commit + version bump commit) の
       # bump 側が承認消費後にブロックされる問題を防ぐ。
+      #
+      # 厳格化 (codex review P2): bash 1 行で staging と commit を同時に行う
+      # コマンド (`git add ... && git commit`) では、PreToolUse hook 実行時点では
+      # 新しい staging が反映されていないため、index 検査だけでは:
+      #   (i) `git add VERSION && git commit ...` が deny されてしまう
+      #       (実際は bookkeeping commit のはずなのに staged が空 or 古い)
+      #   (ii) `git add src/main.go && git commit` が allow されてしまう
+      #       (index に古い VERSION-only staging が残っていると bookkeeping 判定)
+      # → BOOKKEEPING_ONLY は「コマンドが pure な `git commit` (index を mutate
+      #   しない) + index がすでに bookkeeping のみ」両方を満たす場合に限定する。
       BOOKKEEPING_ONLY="false"
-      if command -v git >/dev/null 2>&1; then
+      # (1) コマンド自体が index を mutate しない pure な `git commit` か検証。
+      #     `git add`, `git restore --staged`, `git reset` を含む command、または
+      #     `&&` / `||` / `;` / `|` で他コマンドと連結されている場合は除外。
+      if echo "$COMMAND" | grep -Eq '(^|[[:space:]])git[[:space:]]+(add|restore|reset|rm)([[:space:]]|$)' \
+         || echo "$COMMAND" | grep -Eq '(&&|\|\||\;|^\||[[:space:]]\|[[:space:]])'; then
+        BOOKKEEPING_ONLY="false"
+      elif command -v git >/dev/null 2>&1; then
         STAGED_FILES=$(git diff --cached --name-only 2>/dev/null || true)
         if [ -n "$STAGED_FILES" ]; then
           BOOKKEEPING_ONLY="true"

@@ -47,8 +47,10 @@ run_handler_with_text() {
   local input
   input="$(printf '{"session_id":"test-%s","transcript_path":"%s","cwd":"%s"}\n' "$$" "$transcript" "$sandbox")"
 
-  # invoke handler — must succeed even on no-op
-  (cd "$sandbox" && CLAUDE_PLUGIN_ROOT="${ROOT_DIR}" printf '%s' "$input" | bash "$HANDLER")
+  # invoke handler — must succeed even on no-op.
+  # Note: env must reach `bash "$HANDLER"` (right side of the pipe), not just
+  # `printf` on the left, so it is set inline on the bash invocation.
+  (cd "$sandbox" && printf '%s' "$input" | CLAUDE_PLUGIN_ROOT="${ROOT_DIR}" bash "$HANDLER")
 }
 
 APPROVE_BODY='## Review Result
