@@ -62,17 +62,6 @@ CHANGELOG の該当セクションをそのまま英訳して転記。
 
 固定: `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
 
-## GitHub Release 作成コマンド
-
-```bash
-gh release create "v$NEW_VERSION" \
-  --title "v$NEW_VERSION - <1-line summary>" \
-  --notes "$(cat <<'EOF'
-<release notes body>
-EOF
-)"
-```
-
 ## Draft 確認
 
 Confirmation Gate では以下を提示:
@@ -96,7 +85,7 @@ Body (first 20 lines):
 
 ## 検証
 
-`gh release create` の前に、Release Notes が以下を満たすかチェック:
+workflow に release notes を渡す前に、以下を満たすかチェック:
 
 1. `## What's Changed` セクションが存在する
 2. **太字サマリー**行が存在する
