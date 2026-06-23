@@ -14,6 +14,20 @@ Change history for claude-code-harness.
 
 ### Fixed
 
+#### Runtime action hard floor を配布版へ昇格
+
+**今まで**: local dogfood では、課金・外部送信・secret 読取・本番 publish・worktree 外破壊の 5 カテゴリを
+実行前に human escalation へ上げる runtime action hard floor を試していました。一方、public `v4.16.1`
+にはこの挙動が入っておらず、local dogfood runtime を public latest へ plain update すると安全挙動が落ちる状態でした。
+
+**今後**: public release line に runtime action hard floor を昇格します。設定や環境変数では無効化できず、
+危険カテゴリは `RUNTIME_FLOOR:<category>:...` の ask decision として必ず人間判断に上がります。
+同時に worktree-escape 判定は narrow にし、OS が scratch 領域として扱う `/tmp` / `/var/tmp` /
+macOS の `/private/tmp` / `$TMPDIR` / user cache 配下の掃除は通します。`~/Desktop` / `~/Documents` /
+`/etc` / `/opt` のような data-loss path は引き続き止めます。
+
+---
+
 #### `/harness-release` が CC runtime hard floor で自動完走できなかった問題 (#221 follow-up)
 
 **今まで**: v4.16.1 リリース時、`/harness-release` の最後の `gh release create` コマンドが

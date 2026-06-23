@@ -44,7 +44,8 @@ func TestCheckCommand_StopsAllFiveCategories(t *testing.T) {
 		{name: "prod-deploy git push tags", cmd: "git push --tags", category: CategoryProdDeploy},
 		{name: "prod-deploy git push version tag", cmd: "git push origin v1.0.0", category: CategoryProdDeploy},
 
-		{name: "worktree-escape absolute outside", cmd: "rm -rf /tmp/outside-worktree", category: CategoryWorktreeEscape},
+		{name: "worktree-escape /etc outside", cmd: "rm -rf /etc/outside-worktree", category: CategoryWorktreeEscape},
+		{name: "worktree-escape /opt outside", cmd: "rm -rf /opt/outside-worktree", category: CategoryWorktreeEscape},
 		{name: "worktree-escape home outside", cmd: "rm -rf ~/outside-worktree", category: CategoryWorktreeEscape},
 	}
 
@@ -134,6 +135,87 @@ func TestCheckCommand_EmptyCommand(t *testing.T) {
 	decision := CheckCommand("", Context{WorktreeRoot: os.TempDir()})
 	if decision.Stopped {
 		t.Fatalf("expected empty command to pass, got %s", decision.Reason)
+	}
+}
+
+func TestCheckWorktreeEscape_AllowsOSTempRoots(t *testing.T) {
+	root := testWorktreeRoot(t)
+
+	cases := []string{
+		"rm -rf /tmp/foo",
+		"rm -rf /tmp/v3check/p1.png /tmp/v3check/p2.png",
+		"rm -rf /var/tmp/build-cache",
+		"rm -rf /private/tmp/scratch",
+		"rm -rf /private/var/tmp/scratch",
+	}
+
+	for _, cmd := range cases {
+		t.Run(cmd, func(t *testing.T) {
+			decision := CheckCommand(cmd, Context{WorktreeRoot: root})
+			if decision.Stopped {
+				t.Fatalf("expected Stopped=false for %q (OS temp allowlist), got Stopped=true reason=%s",
+					cmd, decision.Reason)
+			}
+		})
+	}
+}
+
+func TestCheckWorktreeEscape_AllowsTMPDIROverride(t *testing.T) {
+	root := testWorktreeRoot(t)
+	custom := t.TempDir()
+	t.Setenv("TMPDIR", custom)
+
+	cmd := "rm -rf " + custom + "/scratch"
+	decision := CheckCommand(cmd, Context{WorktreeRoot: root})
+	if decision.Stopped {
+		t.Fatalf("expected Stopped=false for TMPDIR-override path %q, got Stopped=true reason=%s",
+			cmd, decision.Reason)
+	}
+}
+
+func TestCheckWorktreeEscape_AllowsUserCacheRoots(t *testing.T) {
+	worktree := testWorktreeRoot(t)
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("TMPDIR", t.TempDir())
+
+	cases := []string{
+		"rm -rf " + home + "/.cache/foo",
+		"rm -rf " + home + "/Library/Caches/foo",
+	}
+
+	for _, cmd := range cases {
+		t.Run(cmd, func(t *testing.T) {
+			decision := CheckCommand(cmd, Context{WorktreeRoot: worktree})
+			if decision.Stopped {
+				t.Fatalf("expected Stopped=false for per-user cache %q, got Stopped=true reason=%s",
+					cmd, decision.Reason)
+			}
+		})
+	}
+}
+
+func TestCheckWorktreeEscape_StopsHomeDirectoriesOutsideCache(t *testing.T) {
+	worktree := testWorktreeRoot(t)
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("TMPDIR", t.TempDir())
+
+	cases := []string{
+		"rm -rf " + home + "/Desktop/important.pdf",
+		"rm -rf " + home + "/Documents/draft.md",
+	}
+
+	for _, cmd := range cases {
+		t.Run(cmd, func(t *testing.T) {
+			decision := CheckCommand(cmd, Context{WorktreeRoot: worktree})
+			if !decision.Stopped {
+				t.Fatalf("expected Stopped=true for data-loss path %q, got Stopped=false", cmd)
+			}
+			if decision.Category != CategoryWorktreeEscape {
+				t.Fatalf("expected worktree-escape category, got %s", decision.Category)
+			}
+		})
 	}
 }
 
