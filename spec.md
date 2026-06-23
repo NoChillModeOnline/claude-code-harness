@@ -518,15 +518,16 @@ Do not merge these stages:
 The release path is split between the `harness-release` skill and the GitHub
 Actions release workflow:
 
-- The skill is responsible up to tag push only. It does not call any
-  `gh release ...` subcommand.
+- The skill is responsible up to tag push only. It does not call the GitHub CLI
+  release subcommand family.
 - GitHub Release publication is the single responsibility of
   `.github/workflows/release.yml`, triggered by `push: tags: ['v*']`.
 - The skill runs a verify step after tag push to confirm publication:
   release must have `draft=false` and at least 4 platform binary assets.
-- The verify step uses `gh api repos/<owner>/<repo>/releases/tags/<tag>`
-  (the `gh release` prefix is excluded from skill output to avoid Claude
-  Code runtime hard floor deny on the `prod-deploy` category).
+- The verify step uses the GitHub CLI API endpoint
+  `repos/<owner>/<repo>/releases/tags/<tag>`. The release subcommand prefix is
+  excluded from skill output to avoid Claude Code runtime hard floor deny on the
+  `prod-deploy` category.
 - On verify timeout the skill emits a WARN and does not abort — the tag
   is already pushed, so a human can inspect the workflow run.
 
