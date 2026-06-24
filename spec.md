@@ -531,6 +531,38 @@ Actions release workflow:
 - On verify timeout the skill emits a WARN and does not abort — the tag
   is already pushed, so a human can inspect the workflow run.
 
+## Plugin Runtime Closure Contract
+
+Installed plugin caches and host-specific distribution packages must be able to
+run every hook and adapter skill without depending on an adjacent source
+checkout.
+
+For Claude Code hooks:
+
+- every `scripts/*.sh` path referenced by `hooks/hooks.json` or
+  `.claude-plugin/hooks.json` must exist in the source checkout, generated
+  Claude host distribution, versioned plugin cache, and local marketplace copy;
+- cache sync must derive this script set from the hook files instead of relying
+  only on a hand-maintained memory-wrapper list;
+- direct script hook commands must treat a plugin root as valid only when the
+  exact script they will execute is present, so a stale versioned cache falls
+  back to the marketplace or source root instead of failing with `No such file`;
+- shell execution of direct hook scripts should not depend on copied executable
+  bits when `/bin/bash <script>` is sufficient.
+
+For Codex and Cursor adapter skills:
+
+- generated host distributions must include the runtime helper scripts invoked
+  by shipped skills, including backend resolver, model routing, Codex
+  companion, Cursor companion, and Cursor setup helpers;
+- Codex `breezing --cursor` and composer-triggered flows are complete only when
+  both the skill surface and the installed plugin cache contain those helpers;
+- `--cursor` is an explicit worker-backend override and must continue to resolve
+  through `resolve-impl-backend.sh`, not by direct environment-only branching.
+
+Release readiness requires tests that build host distributions, simulate cache
+sync, and verify the installed-cache file presence for these runtime helpers.
+
 ## README Product Surface Contract
 
 The root README and Japanese README are public product surfaces, not internal

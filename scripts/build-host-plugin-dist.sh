@@ -94,6 +94,24 @@ copy_runtime_helpers() {
   done
 }
 
+copy_hook_script_closure() {
+  local dst_root="$1"
+  local hooks_file="$2"
+  [ -f "${hooks_file}" ] || return 0
+
+  local rel
+  while IFS= read -r rel; do
+    [ -n "${rel}" ] || continue
+    if [ ! -f "${ROOT_DIR}/${rel}" ]; then
+      echo "hook script reference missing from source: ${rel}" >&2
+      exit 1
+    fi
+    mkdir -p "$(dirname "${dst_root}/${rel}")"
+    cp "${ROOT_DIR}/${rel}" "${dst_root}/${rel}"
+    chmod +x "${dst_root}/${rel}" 2>/dev/null || true
+  done < <(grep -Eoh 'scripts/[A-Za-z0-9_./-]+\.sh' "${hooks_file}" | sort -u)
+}
+
 write_normalized_manifest() {
   local host="$1"
   local src_manifest="$2"
@@ -238,6 +256,8 @@ build_claude() {
   copy_tree "${ROOT_DIR}/agents" "${OUT_DIR}/agents"
   copy_tree "${ROOT_DIR}/hooks" "${OUT_DIR}/hooks"
   copy_tree "${ROOT_DIR}/output-styles" "${OUT_DIR}/output-styles"
+  copy_hook_script_closure "${OUT_DIR}" "${ROOT_DIR}/.claude-plugin/hooks.json"
+  copy_hook_script_closure "${OUT_DIR}" "${ROOT_DIR}/hooks/hooks.json"
   mkdir -p "${OUT_DIR}/bin"
   for bin in harness harness-darwin-amd64 harness-darwin-arm64 harness-linux-amd64 harness-windows-amd64.exe; do
     if [ -f "${ROOT_DIR}/bin/${bin}" ]; then

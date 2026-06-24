@@ -44,12 +44,26 @@ assert_manifest_no_parent_paths() {
   fi
 }
 
+assert_hook_script_closure() {
+  local base="$1"
+  local hooks_file="$2"
+  local rel
+
+  [ -f "${base}/${hooks_file}" ] || fail "${base} missing ${hooks_file}"
+  while IFS= read -r rel; do
+    [ -n "$rel" ] || continue
+    assert_present "$base" "$rel"
+  done < <(grep -Eoh 'scripts/[A-Za-z0-9_./-]+\.sh' "${base}/${hooks_file}" | sort -u)
+}
+
 CLAUDE_OUT="$(build_host claude)"
 CODEX_OUT="$(build_host codex)"
 CURSOR_OUT="$(build_host cursor)"
 
 assert_present "$CLAUDE_OUT" ".claude-plugin/plugin.json"
 assert_present "$CLAUDE_OUT" "skills/harness-work/SKILL.md"
+assert_hook_script_closure "$CLAUDE_OUT" ".claude-plugin/hooks.json"
+assert_hook_script_closure "$CLAUDE_OUT" "hooks/hooks.json"
 assert_absent "$CLAUDE_OUT" ".codex-plugin"
 assert_absent "$CLAUDE_OUT" ".cursor-plugin"
 assert_absent "$CLAUDE_OUT" "codex"
@@ -57,6 +71,10 @@ assert_absent "$CLAUDE_OUT" ".cursor"
 
 assert_present "$CODEX_OUT" ".codex-plugin/plugin.json"
 assert_present "$CODEX_OUT" "skills/harness-plan/SKILL.md"
+assert_present "$CODEX_OUT" "scripts/codex-companion.sh"
+assert_present "$CODEX_OUT" "scripts/cursor-companion.sh"
+assert_present "$CODEX_OUT" "scripts/resolve-impl-backend.sh"
+assert_present "$CODEX_OUT" "scripts/model-routing.sh"
 assert_absent "$CODEX_OUT" ".claude-plugin"
 assert_absent "$CODEX_OUT" ".cursor-plugin"
 assert_absent "$CODEX_OUT" ".cursor"
@@ -64,6 +82,9 @@ assert_absent "$CODEX_OUT" ".cursor"
 assert_present "$CURSOR_OUT" ".cursor-plugin/plugin.json"
 assert_present "$CURSOR_OUT" "skills/harness-work/SKILL.md"
 assert_present "$CURSOR_OUT" "agents/worker.md"
+assert_present "$CURSOR_OUT" "scripts/cursor-companion.sh"
+assert_present "$CURSOR_OUT" "scripts/resolve-impl-backend.sh"
+assert_present "$CURSOR_OUT" "scripts/model-routing.sh"
 assert_absent "$CURSOR_OUT" ".claude-plugin"
 assert_absent "$CURSOR_OUT" ".codex-plugin"
 
