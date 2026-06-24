@@ -19,7 +19,7 @@ assert_file() {
 assert_contains() {
   local file="$1"
   local needle="$2"
-  grep -Fq "$needle" "$file" || fail "missing '$needle' in $file"
+  grep -Fq -- "$needle" "$file" || fail "missing '$needle' in $file"
 }
 
 assert_file "$MANIFEST"
@@ -80,6 +80,18 @@ NODE
 
 [ -f "$DIST_TMP/codex-dist/skills/harness-plan/SKILL.md" ] \
   || fail "generated codex dist missing harness-plan skill"
+[ -f "$DIST_TMP/codex-dist/skills/breezing/SKILL.md" ] \
+  || fail "generated codex dist missing breezing skill"
+assert_contains "$DIST_TMP/codex-dist/skills/breezing/SKILL.md" "--cursor"
+
+for helper in \
+  scripts/codex-companion.sh \
+  scripts/cursor-companion.sh \
+  scripts/resolve-impl-backend.sh \
+  scripts/model-routing.sh; do
+  [ -f "$DIST_TMP/codex-dist/$helper" ] \
+    || fail "generated codex dist missing runtime helper: $helper"
+done
 
 if command -v codex >/dev/null 2>&1; then
   TMP_HOME="$(mktemp -d)"
@@ -124,6 +136,17 @@ NODE
   CACHE_ROOT="$TMP_CODEX_HOME/plugins/cache/claude-code-harness-marketplace/claude-code-harness/$MANIFEST_VERSION"
   [ -f "$CACHE_ROOT/.codex-plugin/plugin.json" ] || fail "Codex plugin manifest was not cached"
   [ -f "$CACHE_ROOT/skills/harness-plan/SKILL.md" ] || fail "Codex harness-plan skill was not cached in generated dist layout"
+  [ -f "$CACHE_ROOT/skills/breezing/SKILL.md" ] || fail "Codex breezing skill was not cached in generated dist layout"
+  grep -Fq -- "--cursor" "$CACHE_ROOT/skills/breezing/SKILL.md" \
+    || fail "cached Codex breezing skill does not expose --cursor"
+  for helper in \
+    scripts/codex-companion.sh \
+    scripts/cursor-companion.sh \
+    scripts/resolve-impl-backend.sh \
+    scripts/model-routing.sh; do
+    [ -f "$CACHE_ROOT/$helper" ] \
+      || fail "Codex installed cache missing runtime helper: $helper"
+  done
   rm -f /tmp/codex-plugin-smoke.$$ /tmp/codex-plugin-list.$$ /tmp/codex-plugin-add.$$
 else
   if [ "$SMOKE_REQUIRED" = "1" ]; then

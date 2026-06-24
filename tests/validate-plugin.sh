@@ -794,6 +794,12 @@ else
     fail_test "Codex-host backend 配線の契約テストに失敗 — 'bash tests/test-cursor-backend-codex-wiring.sh' で詳細確認"
 fi
 
+if bash "$PLUGIN_ROOT/tests/test-codex-companion-default-effort.sh" > /dev/null 2>&1; then
+    pass_test "codex-companion は --effort 未指定でも default effort を安全に付与できます (test-codex-companion-default-effort.sh)"
+else
+    fail_test "codex-companion default effort の契約テストに失敗 — 'bash tests/test-codex-companion-default-effort.sh' で詳細確認"
+fi
+
 if bash "$PLUGIN_ROOT/tests/test-cursor-backend-onboarding.sh" > /dev/null 2>&1; then
     pass_test "harness-setup に cursor backend 導入動線が記載されています (test-cursor-backend-onboarding.sh)"
 else

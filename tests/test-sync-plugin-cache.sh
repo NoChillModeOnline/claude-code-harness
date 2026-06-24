@@ -46,6 +46,10 @@ HOME="${TMP_HOME}" CLAUDE_PLUGIN_ROOT="${INVALID_ROOT}" bash "${ROOT_DIR}/script
 
 required_cached_files=(
   "${CACHE_DIR}/scripts/lib/harness-mem-bridge.sh"
+  "${CACHE_DIR}/scripts/codex-companion.sh"
+  "${CACHE_DIR}/scripts/cursor-companion.sh"
+  "${CACHE_DIR}/scripts/model-routing.sh"
+  "${CACHE_DIR}/scripts/resolve-impl-backend.sh"
   "${CACHE_DIR}/scripts/hook-handlers/memory-bridge.sh"
   "${CACHE_DIR}/scripts/hook-handlers/memory-session-start.sh"
   "${CACHE_DIR}/scripts/hook-handlers/memory-user-prompt.sh"
@@ -56,6 +60,10 @@ required_cached_files=(
   "${CACHE_DIR}/.claude-plugin/hooks.json"
   "${CACHE_DIR}/.claude-plugin/settings.json"
   "${MARKETPLACE_DIR}/scripts/lib/harness-mem-bridge.sh"
+  "${MARKETPLACE_DIR}/scripts/codex-companion.sh"
+  "${MARKETPLACE_DIR}/scripts/cursor-companion.sh"
+  "${MARKETPLACE_DIR}/scripts/model-routing.sh"
+  "${MARKETPLACE_DIR}/scripts/resolve-impl-backend.sh"
   "${MARKETPLACE_DIR}/scripts/hook-handlers/memory-bridge.sh"
   "${MARKETPLACE_DIR}/scripts/hook-handlers/memory-session-start.sh"
   "${MARKETPLACE_DIR}/scripts/hook-handlers/memory-user-prompt.sh"
@@ -87,6 +95,30 @@ for dir in "${required_cached_dirs[@]}"; do
     exit 1
   fi
 done
+
+assert_hook_script_closure() {
+  local hooks_file="$1"
+  local target_root="$2"
+  local rel
+
+  if [[ ! -f "$hooks_file" ]]; then
+    echo "hook script closure check missing hooks file: ${hooks_file}"
+    exit 1
+  fi
+
+  while IFS= read -r rel; do
+    [[ -n "$rel" ]] || continue
+    if [[ ! -f "${target_root}/${rel}" ]]; then
+      echo "sync-plugin-cache did not populate hook script ref: ${target_root}/${rel}"
+      exit 1
+    fi
+  done < <(grep -Eoh 'scripts/[A-Za-z0-9_./-]+\.sh' "$hooks_file" | sort -u)
+}
+
+assert_hook_script_closure "${CACHE_DIR}/.claude-plugin/hooks.json" "${CACHE_DIR}"
+assert_hook_script_closure "${CACHE_DIR}/hooks/hooks.json" "${CACHE_DIR}"
+assert_hook_script_closure "${MARKETPLACE_DIR}/.claude-plugin/hooks.json" "${MARKETPLACE_DIR}"
+assert_hook_script_closure "${MARKETPLACE_DIR}/hooks/hooks.json" "${MARKETPLACE_DIR}"
 
 for private_path in \
   "${CACHE_DIR}/skills/test-private-sync" \

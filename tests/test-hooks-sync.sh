@@ -219,6 +219,44 @@ test_hook_command_resolves_without_plugin_root() {
   return 0
 }
 
+test_script_hook_ignores_stale_plugin_root() {
+  local hooks_file="$PROJECT_ROOT/hooks/hooks.json"
+  local script_command
+  local stale_root
+  local tmp_dir
+  local script_status
+
+  script_command="$(jq -r '.hooks.UserPromptSubmit[] | select(.matcher=="*") | .hooks[] | select(.type=="command" and (.command | contains("userprompt-inject-policy.sh"))) | .command' "$hooks_file" | head -n 1)"
+  if [ -z "$script_command" ] || [ "$script_command" = "null" ]; then
+    echo "    Error: could not extract UserPromptSubmit script command"
+    return 1
+  fi
+
+  stale_root="$(mktemp -d)"
+  tmp_dir="$(mktemp -d)"
+  mkdir -p "$stale_root/bin" "$stale_root/.claude-plugin"
+  printf '#!/usr/bin/env bash\nexit 0\n' > "$stale_root/bin/harness"
+  chmod +x "$stale_root/bin/harness"
+  printf '{"name":"claude-code-harness"}\n' > "$stale_root/.claude-plugin/plugin.json"
+
+  set +e
+  (
+    cd "$tmp_dir" && \
+      CLAUDE_PLUGIN_ROOT="$stale_root" CLAUDE_PROJECT_DIR="$PROJECT_ROOT" /bin/sh -c "$script_command" </dev/null >/dev/null 2>/dev/null
+  )
+  script_status=$?
+  set -e
+  rm -rf "$stale_root" "$tmp_dir"
+
+  if [ "$script_status" -ne 0 ]; then
+    echo "    Error: shell script hook used stale CLAUDE_PLUGIN_ROOT instead of falling back"
+    echo "    Exit status: ${script_status}"
+    return 1
+  fi
+
+  return 0
+}
+
 # ==================================================
 # メイン実行
 # ==================================================
@@ -241,6 +279,7 @@ run_test "必須フックイベントが存在" test_required_hook_events
 run_test "禁止された prompt 使用がない" test_no_forbidden_prompt_usage
 run_test "CLAUDE_PLUGIN_ROOT 空時に /bin/harness へ落ちない" test_no_raw_plugin_root_harness_paths
 run_test "CLAUDE_PLUGIN_ROOT 未設定でも hook command が root 解決できる" test_hook_command_resolves_without_plugin_root
+run_test "stale CLAUDE_PLUGIN_ROOT でも direct script hook が fallback する" test_script_hook_ignores_stale_plugin_root
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
