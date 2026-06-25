@@ -398,9 +398,10 @@ if [ -f "$POST_TOOL_FAILURE" ]; then
     target_file="$tmp_dir/target.txt"
     mkdir -p "$tmp_dir/.claude/state"
     printf 'SAFE\n' > "$target_file"
-    ln -s "$target_file" "$tmp_dir/.claude/state/tool-failure-counter.txt" 2>/dev/null || true
+    # On Windows/MSYS, bare ln -s creates file copies; MSYS=winsymlinks:nativestrict forces real symlinks
+    MSYS=winsymlinks:nativestrict ln -s "$target_file" "$tmp_dir/.claude/state/tool-failure-counter.txt" 2>/dev/null \
+        || ln -s "$target_file" "$tmp_dir/.claude/state/tool-failure-counter.txt" 2>/dev/null || true
 
-    # ponytail: skip symlink test on Windows where ln -s creates file copies, not real symlinks
     if [ -L "$tmp_dir/.claude/state/tool-failure-counter.txt" ]; then
         hook_output="$(printf '{"tool_name":"Bash","error":"boom"}' | PROJECT_ROOT="$tmp_dir" bash "$POST_TOOL_FAILURE" 2>/dev/null || true)"
         target_after="$(cat "$target_file" 2>/dev/null || true)"
@@ -411,7 +412,7 @@ if [ -f "$POST_TOOL_FAILURE" ]; then
             fail_test "post-tool-failure.sh の symlink 防御が不足しています"
         fi
     else
-        warn_test "symlink 非対応環境 (Windows): post-tool-failure.sh symlink 防御テストをスキップします"
+        warn_test "symlink 非対応環境: post-tool-failure.sh symlink 防御テストをスキップします"
     fi
 
     rm -rf "$tmp_dir"
